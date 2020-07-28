@@ -49,14 +49,14 @@ public class WAL {
     }
 
     public static void main(String[] args) {
+
         WAL wal = new WAL("b.wal");
-        ByteBuffer buf = ByteBuffer.allocate(WAL_SIZE);
-        try {
-            wal.channel.read(buf);
-            System.out.println(buf);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        ByteBuffer buf = wal.buffer.duplicate();
+        buf.position(0);
+        buf.limit(1);
+        byte b = buf.get();
+        System.out.println(b);
+        wal.write("a".getBytes());
     }
 
 
