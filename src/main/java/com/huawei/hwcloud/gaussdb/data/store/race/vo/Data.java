@@ -18,4 +18,10 @@ public class Data implements Serializable {
 
     private long[] field;
 
+
+    public Data(long k, long v) {
+        this.key = k;
+        this.version = v;
+    }
+
 }
