@@ -1,4 +1,4 @@
-package com.huawei.hwcloud.gaussdb.data.store.race;
+package com.huawei.hwcloud.gaussdb.data.store.race.utils;
 
 import sun.misc.Unsafe;
 
