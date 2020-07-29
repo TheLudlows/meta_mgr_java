@@ -1,13 +1,10 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
-import com.carrotsearch.hppc.LongArrayList;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
-import io.netty.util.collection.LongObjectHashMap;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG;
 
@@ -36,7 +33,7 @@ public class FakeTest {
         }
         for(int i= 0;i<1000;i++ ) {
             Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/8);
-            LOG(data.toString());
+            //LOG(data.toString());
         }
         store.deInit();
     }

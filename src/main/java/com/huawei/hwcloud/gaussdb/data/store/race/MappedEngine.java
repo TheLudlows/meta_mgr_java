@@ -21,7 +21,7 @@ public class MappedEngine implements DBEngine {
     private Bucket buckets[];
 
     public MappedEngine(String dir) {
-        this.dir = dir;
+        this.dir = dir+"/";
         buckets = new Bucket[BUCKET_SIZE];
         init();
     }
@@ -91,7 +91,7 @@ class Bucket {
                 versions.add(new Tuple2<>(v, i));
             }
         }
-       LOG(" recover index size:" + index.size());
+       LOG("recover index size:" + index.size());
     }
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) {
