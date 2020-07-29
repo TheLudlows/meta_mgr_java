@@ -6,4 +6,10 @@ public interface Constants {
     int BUCKET_SIZE = 16;
     int FILED_MAPPED_SIZE = 1024 * 1024 * 1024;
     String DATA_SUFFIX = ".data";
+
+    String LOG_PREFIX = "[LIBMETA_MGR]";
+
+    static void LOG(String s) {
+        System.out.println(LOG_PREFIX + s);
+    }
 }

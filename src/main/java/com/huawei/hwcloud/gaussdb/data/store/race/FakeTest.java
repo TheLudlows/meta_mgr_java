@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG;
+
 /**
  * 模拟本地测试
  */
@@ -29,11 +31,11 @@ public class FakeTest {
             deltaPacket.setDeltaItem(list);
             store.writeDeltaPacket(deltaPacket);
         }
-        store.deInit();
         for(int i= 0;i<100;i++ ) {
-            Data data = store.readDataByVersion(i, ThreadLocalRandom.current().nextInt(9999));
-            System.out.println(data);
+            Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/-1);
+            LOG(data.toString());
         }
+        store.deInit();
     }
 
     public static long[] randomDelta() {

@@ -2,10 +2,11 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG;
+
 
 public class DataStoreRaceImpl implements DataStoreRace {
 
@@ -17,38 +18,57 @@ public class DataStoreRaceImpl implements DataStoreRace {
 
     @Override
     public boolean init(String dir) {
-        this.counter = new AtomicInteger();
-        this.key = new ConcurrentHashMap<>();
-        readCounter = new LongAdder();
-        System.out.println("Init dir:" + dir);
-        dbEngine = new DBEngine(dir);
-        dbEngine.init();
-        return true;
+        try {
+
+            this.counter = new AtomicInteger();
+            this.key = new ConcurrentHashMap<>();
+            readCounter = new LongAdder();
+            LOG("Init dir:" + dir);
+            dbEngine = new DBEngine(dir);
+            dbEngine.init();
+            return true;
+        } catch (Exception e) {
+            LOG(e.getMessage());
+        }
+        return false;
     }
 
     @Override
     public void deInit() {
-        System.out.println("all request:" + counter.get());
-        System.out.println("all keys:" + key.size());
-        System.out.println("all read:" + readCounter.sum());
-        dbEngine.print();
+        try {
+            LOG("all request:" + counter.get());
+            LOG("all keys:" + key.size());
+            LOG("all read:" + readCounter.sum());
+            dbEngine.print();
+        } catch (Exception e) {
+            LOG(e.getMessage());
+        }
     }
 
     @Override
     public void writeDeltaPacket(DeltaPacket deltaPacket) {
-        counter.getAndIncrement();
-        long v = deltaPacket.getVersion();
-        for (DeltaPacket.DeltaItem item : deltaPacket.getDeltaItem()) {
-            if (!key.contains(item.getKey())) {
-                key.put(item.getKey(), o);
+        try {
+            counter.getAndIncrement();
+            long v = deltaPacket.getVersion();
+            for (DeltaPacket.DeltaItem item : deltaPacket.getDeltaItem()) {
+                if (!key.contains(item.getKey())) {
+                    key.put(item.getKey(), o);
+                }
+                dbEngine.write(v, item);
             }
-            dbEngine.write(v, item);
+        } catch (Exception e) {
+            LOG(e.getMessage());
         }
     }
 
     @Override
     public Data readDataByVersion(long key, long version) {
-        readCounter.add(1);
-        return dbEngine.read(key, version);
+        try {
+            readCounter.add(1);
+            return dbEngine.read(key, version);
+        } catch (Exception e) {
+            LOG(e.getMessage());
+        }
+        return null;
     }
 }

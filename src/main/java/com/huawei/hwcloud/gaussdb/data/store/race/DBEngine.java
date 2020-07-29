@@ -20,10 +20,11 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
  * 数据分区策略
  * 1. 基于线程分区，即一个线程内所有的数据写入同一个文件。
  * 2. key 分区，key取余 相同的key落入一个文件中。
- * 进程奔溃可恢复的策略
+ * 进程崩溃可恢复的策略
  * 1. mapped file 缺点：多次触发缺页中断，造成写入缓慢，优点：可更新
  * 2. mapped + dio
  **/
+
 
 public class DBEngine {
     private String dir;
@@ -100,8 +101,7 @@ class Bucket {
                 versions.add(new Tuple2<>(v, i));
             }
         }
-        System.out.println(fileName + " recover index size:" + index.size());
-
+       LOG(" recover index size:" + index.size());
     }
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) {
@@ -151,7 +151,7 @@ class Bucket {
     }
 
     public void print() {
-        System.out.println(fileName + " count:" + count);
+        LOG(fileName + " count:" + count);
     }
 }
 
