@@ -19,12 +19,11 @@ public class DataStoreRaceImpl implements DataStoreRace {
     @Override
     public boolean init(String dir) {
         try {
-
             this.counter = new AtomicInteger();
             this.key = new ConcurrentHashMap<>();
             readCounter = new LongAdder();
             LOG("Init dir:" + dir);
-            dbEngine = new DBEngine(dir);
+            dbEngine = new MappedEngine(dir);
             dbEngine.init();
             return true;
         } catch (Exception e) {
