@@ -63,8 +63,8 @@ class Bucket {
             index = new HashMap<>();
             counterBuffer = FileChannel.open(new File(fileName + ".counter").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
                     .map(FileChannel.MapMode.READ_WRITE, 0, 4);
-            FileChannel channel = FileChannel.open(new File(fileName + DATA_SUFFIX).toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
-            dataBuffer = channel.map(FileChannel.MapMode.READ_WRITE, 0, FILED_MAPPED_SIZE);
+            dataBuffer =  FileChannel.open(new File(fileName + DATA_SUFFIX).toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
+                    .map(FileChannel.MapMode.READ_WRITE, 0, FILED_MAPPED_SIZE);
             keyBuffer = FileChannel.open(new File(fileName + ".key").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
                     .map(FileChannel.MapMode.READ_WRITE, 0, FILED_MAPPED_SIZE / 32);
             tryRecovery();
