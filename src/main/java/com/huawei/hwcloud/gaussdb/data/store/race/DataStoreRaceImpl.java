@@ -56,9 +56,6 @@ public class DataStoreRaceImpl implements DataStoreRace {
             List<DeltaPacket.DeltaItem> list = deltaPacket.getDeltaItem();
             for (int i = 0; i < count; i++) {
                 DeltaPacket.DeltaItem item = list.get(i);
-                if (!key.contains(item.getKey())) {
-                    key.put(item.getKey(), o);
-                }
                 dbEngine.write(v, item);
             }
         } catch (Exception e) {

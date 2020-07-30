@@ -34,7 +34,7 @@ public class FakeTest {
     public static long[] randomDelta() {
         long[] longs = new long[64];
         for (int i = 0; i < 64; i++) {
-            longs[i] = 1;
+            longs[i] = 2;
         }
         return longs;
     }

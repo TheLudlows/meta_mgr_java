@@ -32,19 +32,20 @@ public class MappedEngine implements DBEngine {
     }
 
     public void write(long v, DeltaPacket.DeltaItem item) {
-        int i = (int) Math.abs(item.getKey() % BUCKET_SIZE);
-        buckets[i].write(v, item);
+        buckets[index(item.getKey())].write(v, item);
     }
 
     public Data read(long key, long v) {
-        int i = (int) Math.abs(key % BUCKET_SIZE);
-        return buckets[i].read(key, v);
+        return buckets[index(key)].read(key, v);
     }
 
     public void print() {
         for (Bucket b : buckets) {
             b.print();
         }
+    }
+    private int index(long key) {
+        return (int) Math.abs(key/2 % BUCKET_SIZE);
     }
 }
 
