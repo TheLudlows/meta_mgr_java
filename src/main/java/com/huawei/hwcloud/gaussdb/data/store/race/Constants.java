@@ -1,14 +1,25 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public interface Constants {
     int WAL_SIZE = 32;
-    int BUCKET_SIZE = 16;
+    int BUCKET_SIZE = 20;
     int FILED_MAPPED_SIZE = 1024 * 1024 * 1024;
-    String DATA_SUFFIX = ".data";
-
     String LOG_PREFIX = "[LIBMETA_MGR] ";
 
+    AtomicInteger LOG_COUNT = new AtomicInteger(1000);
+
     static void LOG(String s) {
-        System.out.println(LOG_PREFIX + s);
+        if (LOG_COUNT.decrementAndGet() > 0)
+            System.out.println(LOG_PREFIX + s);
     }
+
+    static void LOG_ERR(String s, Exception e) {
+        if (LOG_COUNT.decrementAndGet() > 0) {
+            System.out.print(LOG_PREFIX + s);
+            e.printStackTrace();
+        }
+    }
+
 }

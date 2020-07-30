@@ -8,22 +8,21 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
+import static java.nio.file.StandardOpenOption.*;
 
 public class MappedEngine implements DBEngine {
     private String dir;
     private Bucket buckets[];
 
     public MappedEngine(String dir) {
-        this.dir = dir+"/";
+        this.dir = dir + "/";
         buckets = new Bucket[BUCKET_SIZE];
-        init();
     }
 
     public void init() {
@@ -33,12 +32,12 @@ public class MappedEngine implements DBEngine {
     }
 
     public void write(long v, DeltaPacket.DeltaItem item) {
-        int i = (int) item.getKey() % BUCKET_SIZE;
+        int i = (int) Math.abs(item.getKey() % BUCKET_SIZE);
         buckets[i].write(v, item);
     }
 
     public Data read(long key, long v) {
-        int i = (int) (key % BUCKET_SIZE);
+        int i = (int) Math.abs(key % BUCKET_SIZE);
         return buckets[i].read(key, v);
     }
 
@@ -61,15 +60,18 @@ class Bucket {
         try {
             this.fileName = fileName;
             index = new HashMap<>();
-            counterBuffer = FileChannel.open(new File(fileName + ".counter").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
+            String counterFileName = fileName + ".counter";
+            String dataFileName = fileName + ".data";
+            String keyFileName = fileName + ".key";
+            counterBuffer = FileChannel.open(new File(counterFileName).toPath(), CREATE, READ, WRITE)
                     .map(FileChannel.MapMode.READ_WRITE, 0, 4);
-            dataBuffer =  FileChannel.open(new File(fileName + DATA_SUFFIX).toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
+            dataBuffer = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE)
                     .map(FileChannel.MapMode.READ_WRITE, 0, FILED_MAPPED_SIZE);
-            keyBuffer = FileChannel.open(new File(fileName + ".key").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
+            keyBuffer = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE)
                     .map(FileChannel.MapMode.READ_WRITE, 0, FILED_MAPPED_SIZE / 32);
             tryRecovery();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG(e.getMessage());
         }
     }
 
@@ -91,11 +93,12 @@ class Bucket {
                 versions.add(new Tuple2<>(v, i));
             }
         }
-       LOG("recover index size:" + index.size());
+        LOG("recover from " + fileName + " count:" + count + " index size:" + index.size());
     }
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) {
         long key = item.getKey();
+        //LOG(Thread.currentThread().getName() + " key:" + key);
         keyBuffer.putLong(key);
         keyBuffer.putLong(v);
         for (long l : item.getDelta()) {
@@ -107,15 +110,16 @@ class Bucket {
             index.put(key, data);
         }
         data.add(new Tuple2<>(v, count));
-        counterBuffer.putInt(0, count++);
+        counterBuffer.putInt(0, ++count);
     }
 
     public synchronized Data read(long k, long v) {
-        Data data = new Data(k, v);
         List<Tuple2<Long, Integer>> versions = index.get(k);
         if (versions == null) {
-            return data;
+            return null;
         }
+        Data data = new Data(k, v);
+
         long[] fields = new long[64];
         for (Tuple2<Long, Integer> t : versions) {
             if (t.a <= v) {
