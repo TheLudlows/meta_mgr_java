@@ -11,9 +11,9 @@ import java.io.IOException;
  * 2. key 分区，key取余 相同的key落入一个文件中。
  * 进程崩溃可恢复的策略
  * 1. mapped file 缺点：多次触发缺页中断，造成写入缓慢，优点：可更新
- * 2. mapped buffer + dio
+* 2. mapped buffer + dio
  * 3. mapped buffer + channel 缺点：相比dio方式多一次复制
- * <p>
+ *
  * 因此有几种不同的实现方式
  **/
 public interface DBEngine {

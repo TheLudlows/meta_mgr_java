@@ -17,6 +17,7 @@ public class FakeTest {
     public static void main(String[] args) throws InterruptedException {
         DataStoreRace store = new DataStoreRaceImpl();
         store.init("data");
+        long start = System.currentTimeMillis();
         Thread t1 = new Thread(() -> write(store, 0, 10));
         Thread t2 = new Thread(() -> write(store, 10, 20));
 
@@ -24,7 +25,7 @@ public class FakeTest {
         t2.start();
         t1.join();
         t2.join();
-        System.out.println("write over");
+        System.out.println("write over cost:" + ((System.currentTimeMillis() - start)/1000) );
         for (int i = 500; i < 1000; i++) {
             Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/8);
             LOG(data.toString());

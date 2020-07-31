@@ -4,7 +4,6 @@ import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -14,7 +13,6 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG_ERR;
 
 public class DataStoreRaceImpl implements DataStoreRace {
     private AtomicInteger counter;
-    private ConcurrentHashMap<Long, Object> key;
     private LongAdder readCounter;
     private DBEngine dbEngine;
 
@@ -22,7 +20,6 @@ public class DataStoreRaceImpl implements DataStoreRace {
     public boolean init(String dir) {
         try {
             this.counter = new AtomicInteger();
-            this.key = new ConcurrentHashMap<>();
             readCounter = new LongAdder();
             LOG("Init dir:" + dir);
             dbEngine = new DioEngine(dir);
@@ -38,7 +35,6 @@ public class DataStoreRaceImpl implements DataStoreRace {
     public void deInit() {
         try {
             LOG("all request:" + counter.get());
-            LOG("all keys:" + key.size());
             LOG("all read:" + readCounter.sum());
             dbEngine.print();
         } catch (Exception e) {

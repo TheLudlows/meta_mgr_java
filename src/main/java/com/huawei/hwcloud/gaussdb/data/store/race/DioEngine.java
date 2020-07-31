@@ -45,6 +45,9 @@ public class DioEngine implements DBEngine {
 
     @Override
     public void print() {
+        for (DioBucket b : buckets) {
+            b.print();
+        }
     }
 
     @Override
@@ -83,7 +86,7 @@ class DioBucket {
             //this.DIO_SUPPORT = DirectIOLib.binit;
             this.DIO_SUPPORT = GLOBAL_DIO;
             this.dir = dir;
-            index = new HashMap<>();
+            index = new HashMap<>(1024*16*4);
             String dataWALName = dir + ".data.wal";
             String dataFileName = dir + ".data";
             String keyFileName = dir + ".key";
@@ -186,13 +189,15 @@ class DioBucket {
 
     private void flush_page() throws IOException {
         // flush to file
-        UNSAFE.copyMemory(null, walAddress, null, writeBufAddress, WAL_SIZE);
-        writeBuf.position(0);
-        writeBuf.limit(WAL_SIZE);
         if (DIO_SUPPORT) {
+            UNSAFE.copyMemory(null, walAddress, null, writeBufAddress, WAL_SIZE);
+            writeBuf.position(0);
+            writeBuf.limit(WAL_SIZE);
             directRandomAccessFile.write(writeBuf, dataPosition);
         } else {
-            fileChannel.write(writeBuf, dataPosition);
+            wal.position(0);
+            wal.limit(WAL_SIZE);
+            fileChannel.write(wal, dataPosition);
         }
         dataPosition += WAL_SIZE;
     }
@@ -224,6 +229,10 @@ class DioBucket {
             }
         }
         return filed;
+    }
+
+    public void print() {
+        LOG(dir + " count:" + count);
     }
 }
 
