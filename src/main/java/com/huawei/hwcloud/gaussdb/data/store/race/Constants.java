@@ -3,9 +3,12 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public interface Constants {
-    int WAL_SIZE = 32;
-    int BUCKET_SIZE = 24;
+    int WAL_SIZE = 1024 * 64;
+    int WAL_COUNT = WAL_SIZE / 64 / 8;
+    int BUCKET_SIZE = 32;
     int FILED_MAPPED_SIZE = 1024 * 1024 * 1024;
+
+    boolean GLOBAL_DIO = false;
     String LOG_PREFIX = "[LIBMETA_MGR] ";
 
     AtomicInteger LOG_COUNT = new AtomicInteger(1000);

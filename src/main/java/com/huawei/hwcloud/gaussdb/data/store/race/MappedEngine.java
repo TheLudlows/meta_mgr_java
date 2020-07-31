@@ -1,5 +1,6 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
+import com.carrotsearch.hppc.LongObjectHashMap;
 import com.huawei.hwcloud.gaussdb.data.store.race.utils.Tuple2;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
@@ -9,9 +10,7 @@ import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static java.nio.file.StandardOpenOption.*;
@@ -44,13 +43,14 @@ public class MappedEngine implements DBEngine {
             b.print();
         }
     }
+
     private int index(long key) {
-        return (int) Math.abs(key/2 % BUCKET_SIZE);
+        return (int) Math.abs((key ^ (key >>> 32)) % BUCKET_SIZE);
     }
 }
 
 class Bucket {
-    private Map<Long, List<Tuple2<Long, Integer>>> index;
+    private LongObjectHashMap<List<Tuple2<Long, Integer>>> index;
     private MappedByteBuffer dataBuffer;
     private MappedByteBuffer counterBuffer;
     private MappedByteBuffer keyBuffer;
@@ -60,7 +60,10 @@ class Bucket {
     public Bucket(String fileName) {
         try {
             this.fileName = fileName;
-            index = new HashMap<>();
+            /**
+             * 450 key % 32
+             */
+            index = new LongObjectHashMap(1024*16*8);
             String counterFileName = fileName + ".counter";
             String dataFileName = fileName + ".data";
             String keyFileName = fileName + ".key";
@@ -99,7 +102,6 @@ class Bucket {
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) {
         long key = item.getKey();
-        //LOG(Thread.currentThread().getName() + " key:" + key);
         keyBuffer.putLong(key);
         keyBuffer.putLong(v);
         for (long l : item.getDelta()) {

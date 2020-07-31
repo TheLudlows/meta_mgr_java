@@ -14,7 +14,6 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG_ERR;
 
 public class DataStoreRaceImpl implements DataStoreRace {
     private AtomicInteger counter;
-    private static final Object o = new Object();
     private ConcurrentHashMap<Long, Object> key;
     private LongAdder readCounter;
     private DBEngine dbEngine;

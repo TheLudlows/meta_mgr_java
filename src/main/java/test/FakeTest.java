@@ -34,19 +34,23 @@ public class FakeTest {
     public static long[] randomDelta() {
         long[] longs = new long[64];
         for (int i = 0; i < 64; i++) {
-            longs[i] = 2;
+            longs[i] = 1;
         }
         return longs;
     }
 
     public static void write(DataStoreRace dataStoreRace, int vs, int ve) {
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 200000; i++) {
             for (int j = vs; j < ve; j++) {
                 DeltaPacket deltaPacket = new DeltaPacket();
-                deltaPacket.setDeltaCount(1L);
+                deltaPacket.setDeltaCount(2L);
                 deltaPacket.setVersion(j);
                 List list = new ArrayList<>();
                 DeltaPacket.DeltaItem item = new DeltaPacket.DeltaItem();
+                item.setKey(i);
+                item.setDelta(randomDelta());
+                list.add(item);
+                item = new DeltaPacket.DeltaItem();
                 item.setKey(i);
                 item.setDelta(randomDelta());
                 list.add(item);
