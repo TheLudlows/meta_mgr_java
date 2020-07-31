@@ -63,7 +63,7 @@ class Bucket {
             /**
              * 450 key % 32
              */
-            index = new LongObjectHashMap(1024*16*8);
+            index = new LongObjectHashMap(1024 * 16 * 8);
             String counterFileName = fileName + ".counter";
             String dataFileName = fileName + ".data";
             String keyFileName = fileName + ".key";

@@ -3,11 +3,9 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 import com.huawei.hwcloud.gaussdb.data.store.race.utils.Tuple2;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
-import com.sun.org.apache.xalan.internal.xsltc.util.IntegerArray;
 import moe.cnkirito.kdio.DirectIOLib;
 import moe.cnkirito.kdio.DirectIOUtils;
 import moe.cnkirito.kdio.DirectRandomAccessFile;
-import sun.jvm.hotspot.utilities.IntArray;
 import sun.nio.ch.DirectBuffer;
 
 import java.io.File;
@@ -60,6 +58,7 @@ public class DioEngine implements DBEngine {
 }
 
 class DioBucket {
+    public static final DirectIOLib DIRECT_IO_LIB = DirectIOLib.getLibForPath("/");
     //
     private String dir;
     // 一个分区总共写入量
@@ -78,13 +77,10 @@ class DioBucket {
     private long walOff;
     private long keyAddress;
     private long walAddress;
-
     private long writeBufAddress;
-
     private ByteBuffer writeBuf;
     private boolean DIO_SUPPORT;
     private DirectRandomAccessFile directRandomAccessFile;
-    public static final DirectIOLib DIRECT_IO_LIB = DirectIOLib.getLibForPath("/");
     private FileChannel fileChannel;
 
     public DioBucket(String dir) {
