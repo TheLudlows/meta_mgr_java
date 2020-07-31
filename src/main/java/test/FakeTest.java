@@ -24,7 +24,8 @@ public class FakeTest {
         t2.start();
         t1.join();
         t2.join();
-        for (int i = 0; i < 1000; i++) {
+        System.out.println("write over");
+        for (int i = 500; i < 1000; i++) {
             Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/8);
             LOG(data.toString());
         }
@@ -40,17 +41,13 @@ public class FakeTest {
     }
 
     public static void write(DataStoreRace dataStoreRace, int vs, int ve) {
-        for (int i = 0; i < 200000; i++) {
+        for (int i = 0; i < 2250000; i++) {
             for (int j = vs; j < ve; j++) {
                 DeltaPacket deltaPacket = new DeltaPacket();
-                deltaPacket.setDeltaCount(2L);
+                deltaPacket.setDeltaCount(1L);
                 deltaPacket.setVersion(j);
                 List list = new ArrayList<>();
                 DeltaPacket.DeltaItem item = new DeltaPacket.DeltaItem();
-                item.setKey(i);
-                item.setDelta(randomDelta());
-                list.add(item);
-                item = new DeltaPacket.DeltaItem();
                 item.setKey(i);
                 item.setDelta(randomDelta());
                 list.add(item);

@@ -4,6 +4,8 @@ import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 
+import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.BUCKET_SIZE;
+
 public class Util {
     public static final Unsafe UNSAFE = unsafe();
 
@@ -16,5 +18,9 @@ public class Util {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public static final int index(long key) {
+        return (int) Math.abs((key ^ (key >>> 32)) % BUCKET_SIZE);
     }
 }

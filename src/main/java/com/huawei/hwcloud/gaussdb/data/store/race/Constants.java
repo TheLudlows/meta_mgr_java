@@ -7,6 +7,7 @@ public interface Constants {
     int WAL_COUNT = WAL_SIZE / 64 / 8;
     int BUCKET_SIZE = 32;
     int FILED_MAPPED_SIZE = 1024 * 1024 * 1024;
+    int KEY_MAPPED_SIZE = 64 * 1024 * 1024;
 
     boolean GLOBAL_DIO = false;
     String LOG_PREFIX = "[LIBMETA_MGR] ";

@@ -20,6 +20,7 @@ import java.util.Map;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.UNSAFE;
+import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.index;
 import static java.nio.file.StandardOpenOption.*;
 
 public class DioEngine implements DBEngine {
@@ -37,14 +38,9 @@ public class DioEngine implements DBEngine {
             buckets[i] = new DioBucket(dir + i);
         }
     }
-
     @Override
     public void write(long v, DeltaPacket.DeltaItem item) throws IOException {
         buckets[index(item.getKey())].write(v, item);
-    }
-
-    private int index(long key) {
-        return (int) Math.abs((key ^ (key >>> 32)) % BUCKET_SIZE);
     }
 
     @Override
@@ -59,7 +55,6 @@ public class DioEngine implements DBEngine {
 
 class DioBucket {
     public static final DirectIOLib DIRECT_IO_LIB = DirectIOLib.getLibForPath("/");
-    //
     private String dir;
     // 一个分区总共写入量
     private int count;
@@ -95,7 +90,7 @@ class DioBucket {
             wal = FileChannel.open(new File(dataWALName).toPath(), CREATE, READ, WRITE)
                     .map(FileChannel.MapMode.READ_WRITE, 0, WAL_SIZE);
             keyBuffer = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE)
-                    .map(FileChannel.MapMode.READ_WRITE, 0, FILED_MAPPED_SIZE / 32);
+                    .map(FileChannel.MapMode.READ_WRITE, 0, KEY_MAPPED_SIZE);
 
             if (DIO_SUPPORT) {
                 this.directRandomAccessFile = new DirectRandomAccessFile(new File(dataFileName), "rw");
@@ -104,7 +99,6 @@ class DioBucket {
             } else {
                 this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
                 this.writeBuf = ByteBuffer.allocateDirect(WAL_SIZE);
-
                 dataPosition = fileChannel.size();
             }
             tryRecover();
@@ -147,10 +141,6 @@ class DioBucket {
 
     }
 
-    private boolean walFull() {
-        return walCount == WAL_COUNT;
-    }
-
     public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {
         long key = item.getKey();
         UNSAFE.putLong(keyAddress + keyOff, key);
@@ -162,9 +152,10 @@ class DioBucket {
             UNSAFE.putLong(walAddress + walOff, l);
             walOff += 8;
         }
-        walCount++;
-        if (walFull()) {
+        if (++walCount == WAL_COUNT) {
             flush_page();
+            walCount = 0;
+            walOff = 0;
         }
         List<Tuple2<Long, Integer>> data = index.get(key);
         if (data == null) {
@@ -203,8 +194,6 @@ class DioBucket {
         } else {
             fileChannel.write(writeBuf, dataPosition);
         }
-        walCount = 0;
-        walOff = 0;
         dataPosition += WAL_SIZE;
     }
 

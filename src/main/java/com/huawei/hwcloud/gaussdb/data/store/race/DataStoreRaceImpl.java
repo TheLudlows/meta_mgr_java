@@ -25,7 +25,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
             this.key = new ConcurrentHashMap<>();
             readCounter = new LongAdder();
             LOG("Init dir:" + dir);
-            dbEngine = new MappedEngine(dir);
+            dbEngine = new DioEngine(dir);
             dbEngine.init();
             return true;
         } catch (Exception e) {
