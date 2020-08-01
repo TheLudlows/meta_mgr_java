@@ -15,30 +15,58 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.UNSAFE;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.index;
 import static java.nio.file.StandardOpenOption.*;
 
-public class DioEngine implements DBEngine {
+/**
+ * y version :mapped file
+ * fields :wal -> channel write
+ */
+public class WALEngine implements DBEngine {
     private String dir;
-    private DioBucket buckets[];
+    private WALBucket buckets[];
+    // print bucket
+    private Thread backPrint;
 
-    public DioEngine(String dir) {
+    public WALEngine(String dir) {
         this.dir = dir + "/";
-        buckets = new DioBucket[BUCKET_SIZE];
+        File f = new File(dir);
+        if (!f.exists()) {
+            f.delete();
+            f.mkdir();
+        }
+        buckets = new WALBucket[BUCKET_SIZE];
     }
 
     @Override
     public void init() {
         for (int i = 0; i < BUCKET_SIZE; i++) {
-            buckets[i] = new DioBucket(dir + i);
+            buckets[i] = new WALBucket(dir + i);
         }
+        backPrint = new Thread(() ->
+        {
+            try {
+                StringBuffer buffer = new StringBuffer();
+
+                while (true) {
+                    buffer.setLength(0);
+                    for(WALBucket bucket : buckets) {
+                        buffer.append(bucket.dir +" " + bucket.count + " " + bucket.index.size() +"|");
+                    }
+                    LOG(buffer.toString());
+                    Thread.sleep(1000 * 5);
+                }
+            } catch (InterruptedException e) {
+                LOG_ERR("err", e);
+            }
+        });
+        backPrint.start();
     }
+
     @Override
     public void write(long v, DeltaPacket.DeltaItem item) throws IOException {
         buckets[index(item.getKey())].write(v, item);
@@ -46,7 +74,7 @@ public class DioEngine implements DBEngine {
 
     @Override
     public void print() {
-        for (DioBucket b : buckets) {
+        for (WALBucket b : buckets) {
             b.print();
         }
     }
@@ -57,15 +85,15 @@ public class DioEngine implements DBEngine {
     }
 }
 
-class DioBucket {
+class WALBucket {
     public static final DirectIOLib DIRECT_IO_LIB = DirectIOLib.getLibForPath("/");
-    private String dir;
+    protected String dir;
     // 一个分区总共写入量
-    private int count;
+    protected int count;
     // wal中的个数
-    private int walCount;
+    protected int walCount;
     // 索引
-    private LongObjectHashMap<Tuple2<List<Long>, List<Integer>>> index;
+    protected LongObjectHashMap<Tuple2<List<Long>, List<Integer>>> index;
     // key version mapped buffer
     private MappedByteBuffer keyBuffer;
     // data wal， mapped 写入防止丢失
@@ -82,7 +110,7 @@ class DioBucket {
     private DirectRandomAccessFile directRandomAccessFile;
     private FileChannel fileChannel;
 
-    public DioBucket(String dir) {
+    public WALBucket(String dir) {
         try {
             //this.DIO_SUPPORT = DirectIOLib.binit;
             this.DIO_SUPPORT = GLOBAL_DIO;
@@ -118,7 +146,7 @@ class DioBucket {
 
         count = UNSAFE.getInt(keyAddress);
         keyOff = 4;
-        walOff = count * 64 * 8 - dataPosition;
+        walOff = count * 64 * 8L - dataPosition;
         walCount = (int) (walOff / 64 / 8);
         LOG("keyAddress:" + keyAddress
                 + " writeBufAddress:" + writeBufAddress
@@ -135,7 +163,7 @@ class DioBucket {
                 keyOff += 8;
                 Tuple2<List<Long>, List<Integer>> versions = index.get(k);
                 if (versions == null) {
-                    versions = new Tuple2<>(new ArrayList<>(),new ArrayList<>());
+                    versions = new Tuple2<>(new ArrayList<>(), new ArrayList<>());
                     index.put(k, versions);
                 }
                 versions.a.add(v);
@@ -151,7 +179,7 @@ class DioBucket {
 
         Tuple2<List<Long>, List<Integer>> versions = index.get(key);
         if (versions == null) {
-            versions = new Tuple2<>(new ArrayList<>(),new ArrayList<>());
+            versions = new Tuple2<>(new ArrayList<>(5), new ArrayList<>(5));
             index.put(key, versions);
         }
         versions.a.add(v);
@@ -167,7 +195,7 @@ class DioBucket {
             walOff += 8;
         }
         if (++walCount == WAL_COUNT) {
-            flush_page();
+            flush_wal();
             walCount = 0;
             walOff = 0;
         }
@@ -180,20 +208,17 @@ class DioBucket {
         }
         Data data = new Data(k, v);
         long[] fields = new long[64];
-        for (int i=0;i<versions.a.size();i++) {
+        for (int i = 0; i < versions.a.size(); i++) {
             long ver = versions.a.get(i);
-            if ( ver <= v) {
-                long[] delta = getFiled(versions.b.get(i));
-                for (int j = 0; j < delta.length; j++) {
-                    fields[j] += delta[j];
-                }
+            if (ver <= v) {
+                addFiled(versions.b.get(i), fields);
             }
         }
         data.setField(fields);
         return data;
     }
 
-    private void flush_page() throws IOException {
+    private void flush_wal() throws IOException {
         // flush to file
         if (DIO_SUPPORT) {
             UNSAFE.copyMemory(null, walAddress, null, writeBufAddress, WAL_SIZE);
@@ -212,18 +237,17 @@ class DioBucket {
 
     }
 
-    private long[] getFiled(Integer n) throws IOException {
-        long[] filed = new long[64];
+    private void addFiled(Integer n, long[] arr) throws IOException {
         long pos = n * 64L * 8;
         if (pos >= dataPosition) {
             // 在wal中
             int walPos = (int) (pos - dataPosition);
             for (int i = 0; i < 64; i++) {
-                filed[i] = UNSAFE.getLong(walAddress + walPos + i * 8);
+                arr[i] += UNSAFE.getLong(walAddress + walPos + i * 8);
             }
         } else {
             // 在文件中
-            writeBuf.clear();
+            writeBuf.position(0);
             writeBuf.limit(64 * 8);
             if (DIO_SUPPORT) {
                 directRandomAccessFile.read(writeBuf, pos);
@@ -231,14 +255,13 @@ class DioBucket {
                 fileChannel.read(writeBuf, pos);
             }
             for (int i = 0; i < 64; i++) {
-                filed[i] = UNSAFE.getLong(writeBufAddress + i * 8);
+                arr[i] += UNSAFE.getLong(writeBufAddress + i * 8);
             }
         }
-        return filed;
     }
 
     public void print() {
-        LOG(dir + " count:" + count);
+        LOG(dir + " count:" + count + " index size:" + index.size());
     }
 }
 

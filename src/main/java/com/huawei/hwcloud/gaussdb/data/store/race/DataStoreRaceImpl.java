@@ -22,7 +22,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
             this.counter = new AtomicInteger();
             readCounter = new LongAdder();
             LOG("Init dir:" + dir);
-            dbEngine = new DioEngine(dir);
+            dbEngine = new WALEngine(dir);
             dbEngine.init();
             return true;
         } catch (Exception e) {
@@ -66,7 +66,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
             if (data == null) {
                 LOG("empty data key" + key + " v " + version);
             } else {
-                LOG("read data key" + key + " v " + version + " data:" + data.toString());
+                //LOG("read data key" + key + " v " + version + " data:" + data.toString());
             }
             return data;
         } catch (Exception e) {

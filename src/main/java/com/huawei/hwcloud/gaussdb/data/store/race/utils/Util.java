@@ -21,6 +21,20 @@ public class Util {
     }
 
     public static final int index(long key) {
-        return (int) Math.abs((key ^ (key >>> 32)) % BUCKET_SIZE);
+        //return (int) Math.abs((key ^ (key >>> 32)) % BUCKET_SIZE);
+        return (int) Math.abs(key % BUCKET_SIZE);
     }
+
+    public static void printMem() {
+        Runtime run = Runtime.getRuntime();
+        long max = run.maxMemory() / 1024 / 1024;
+        long total = run.totalMemory() / 1024 / 1024;
+        long free = run.freeMemory() / 1024 / 1024;
+        long usable = max - total + free;
+        System.out.println("Max = " + max + "M");
+        System.out.println("Total = " + total + "M");
+        System.out.println("free = " + free + "M");
+        System.out.println("Usable = " + usable + "M");
+    }
+
 }
