@@ -18,8 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
-import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.UNSAFE;
-import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.index;
+import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.readCounter;
+import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.writeCounter;
+import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
 import static java.nio.file.StandardOpenOption.*;
 
 /**
@@ -51,14 +52,23 @@ public class WALEngine implements DBEngine {
         {
             try {
                 StringBuffer buffer = new StringBuffer();
-
+                long lastWrite = 0;
+                long lastRead = 0;
                 while (true) {
+                    // buckets
                     buffer.setLength(0);
                     for(WALBucket bucket : buckets) {
                         buffer.append(bucket.dir +" " + bucket.count + " " + bucket.index.size() +"|");
                     }
                     LOG(buffer.toString());
-                    Thread.sleep(1000 * 5);
+                    // request
+                    long read = readCounter.sum();
+                    long write = writeCounter.sum();
+                    LOG("last read:" + (read - lastRead) + " last write:" + (write - lastWrite));
+                    LOG(mem());
+                    lastRead = read;
+                    lastWrite = write;
+                    Thread.sleep(MONITOR_TIME);
                 }
             } catch (InterruptedException e) {
                 LOG_ERR("err", e);
@@ -179,7 +189,7 @@ class WALBucket {
 
         Tuple2<List<Long>, List<Integer>> versions = index.get(key);
         if (versions == null) {
-            versions = new Tuple2<>(new ArrayList<>(5), new ArrayList<>(5));
+            versions = new Tuple2<>(new ArrayList<>(10), new ArrayList<>(10));
             index.put(key, versions);
         }
         versions.a.add(v);

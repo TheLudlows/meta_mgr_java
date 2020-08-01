@@ -4,7 +4,6 @@ import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG;
@@ -12,14 +11,14 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG_ERR;
 
 
 public class DataStoreRaceImpl implements DataStoreRace {
-    private AtomicInteger counter;
-    private LongAdder readCounter;
+    public static LongAdder writeCounter;
+    public static LongAdder readCounter;
     private DBEngine dbEngine;
 
     @Override
     public boolean init(String dir) {
         try {
-            this.counter = new AtomicInteger();
+            this.writeCounter = new LongAdder();
             readCounter = new LongAdder();
             LOG("Init dir:" + dir);
             dbEngine = new WALEngine(dir);
@@ -34,7 +33,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
     @Override
     public void deInit() {
         try {
-            LOG("all request:" + counter.get());
+            LOG("all request:" + writeCounter.sum());
             LOG("all read:" + readCounter.sum());
             dbEngine.print();
         } catch (Exception e) {
@@ -45,7 +44,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
     @Override
     public void writeDeltaPacket(DeltaPacket deltaPacket) {
         try {
-            counter.getAndIncrement();
+            writeCounter.add(1);
             long count = deltaPacket.getDeltaCount();
             long v = deltaPacket.getVersion();
             List<DeltaPacket.DeltaItem> list = deltaPacket.getDeltaItem();

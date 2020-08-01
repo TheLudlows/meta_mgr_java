@@ -36,7 +36,6 @@ public class FakeTest {
             ts[i].join();
         }
         System.out.println("write over cost:" + ((System.currentTimeMillis() - start) / 1000));
-        Util.printMem();
         start = System.currentTimeMillis();
         for (int i = 0; i < thread_n; i++) {
             int x = i;
