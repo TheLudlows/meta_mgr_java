@@ -65,6 +65,8 @@ public class DataStoreRaceImpl implements DataStoreRace {
             Data data = dbEngine.read(key, version);
             if (data == null) {
                 LOG("empty data key" + key + " v " + version);
+            } else {
+                LOG("read data key" + key + " v " + version + " data:" + data.toString());
             }
             return data;
         } catch (Exception e) {

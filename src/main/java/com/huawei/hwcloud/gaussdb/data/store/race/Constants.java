@@ -12,7 +12,7 @@ public interface Constants {
     boolean GLOBAL_DIO = false;
     String LOG_PREFIX = "[LIBMETA_MGR] ";
 
-    AtomicInteger LOG_COUNT = new AtomicInteger(1000);
+    AtomicInteger LOG_COUNT = new AtomicInteger(5000);
 
     static void LOG(String s) {
         if (LOG_COUNT.decrementAndGet() > 0)

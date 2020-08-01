@@ -1,5 +1,6 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
+import com.carrotsearch.hppc.LongObjectHashMap;
 import com.huawei.hwcloud.gaussdb.data.store.race.utils.Tuple2;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
@@ -64,7 +65,7 @@ class DioBucket {
     // wal中的个数
     private int walCount;
     // 索引
-    private Map<Long, List<Tuple2<Long, Integer>>> index;
+    private LongObjectHashMap<Tuple2<List<Long>, List<Integer>>> index;
     // key version mapped buffer
     private MappedByteBuffer keyBuffer;
     // data wal， mapped 写入防止丢失
@@ -86,7 +87,7 @@ class DioBucket {
             //this.DIO_SUPPORT = DirectIOLib.binit;
             this.DIO_SUPPORT = GLOBAL_DIO;
             this.dir = dir;
-            index = new HashMap<>(1024*16*4);
+            index = new LongObjectHashMap<>();
             String dataWALName = dir + ".data.wal";
             String dataFileName = dir + ".data";
             String keyFileName = dir + ".key";
@@ -132,12 +133,13 @@ class DioBucket {
                 keyOff += 8;
                 long v = UNSAFE.getLong(keyAddress + keyOff);
                 keyOff += 8;
-                List<Tuple2<Long, Integer>> versions = index.get(k);
+                Tuple2<List<Long>, List<Integer>> versions = index.get(k);
                 if (versions == null) {
-                    versions = new ArrayList<>();
+                    versions = new Tuple2<>(new ArrayList<>(),new ArrayList<>());
                     index.put(k, versions);
                 }
-                versions.add(new Tuple2<>(v, i));
+                versions.a.add(v);
+                versions.b.add(i);
             }
         }
         LOG("recover from " + dir + " count:" + count + " index size:" + index.size());
@@ -146,6 +148,15 @@ class DioBucket {
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {
         long key = item.getKey();
+
+        Tuple2<List<Long>, List<Integer>> versions = index.get(key);
+        if (versions == null) {
+            versions = new Tuple2<>(new ArrayList<>(),new ArrayList<>());
+            index.put(key, versions);
+        }
+        versions.a.add(v);
+        versions.b.add(count);
+
         UNSAFE.putLong(keyAddress + keyOff, key);
         keyOff += 8;
         UNSAFE.putLong(keyAddress + keyOff, v);
@@ -160,26 +171,21 @@ class DioBucket {
             walCount = 0;
             walOff = 0;
         }
-        List<Tuple2<Long, Integer>> data = index.get(key);
-        if (data == null) {
-            data = new ArrayList();
-            index.put(key, data);
-        }
-        data.add(new Tuple2<>(v, count));
     }
 
     public synchronized Data read(long k, long v) throws IOException {
-        List<Tuple2<Long, Integer>> versions = index.get(k);
+        Tuple2<List<Long>, List<Integer>> versions = index.get(k);
         if (versions == null) {
             return null;
         }
         Data data = new Data(k, v);
         long[] fields = new long[64];
-        for (Tuple2<Long, Integer> t : versions) {
-            if (t.a <= v) {
-                long[] delta = getFiled(t.b);
-                for (int i = 0; i < delta.length; i++) {
-                    fields[i] += delta[i];
+        for (int i=0;i<versions.a.size();i++) {
+            long ver = versions.a.get(i);
+            if ( ver <= v) {
+                long[] delta = getFiled(versions.b.get(i));
+                for (int j = 0; j < delta.length; j++) {
+                    fields[j] += delta[j];
                 }
             }
         }
@@ -209,7 +215,7 @@ class DioBucket {
     private long[] getFiled(Integer n) throws IOException {
         long[] filed = new long[64];
         long pos = n * 64L * 8;
-        if (pos > dataPosition) {
+        if (pos >= dataPosition) {
             // 在wal中
             int walPos = (int) (pos - dataPosition);
             for (int i = 0; i < 64; i++) {

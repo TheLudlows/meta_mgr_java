@@ -42,7 +42,7 @@ public class FakeTest {
     }
 
     public static void write(DataStoreRace dataStoreRace, int vs, int ve) {
-        for (int i = 0; i < 2250000; i++) {
+        for (int i = 0; i < 225000; i++) {
             for (int j = vs; j < ve; j++) {
                 DeltaPacket deltaPacket = new DeltaPacket();
                 deltaPacket.setDeltaCount(1L);
