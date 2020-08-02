@@ -1,27 +1,11 @@
 package com.huawei.hwcloud.gaussdb.data.store.race.utils;
 
-import sun.misc.Unsafe;
-
-import java.lang.reflect.Field;
-
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.BUCKET_SIZE;
 
 public class Util {
-    public static final Unsafe UNSAFE = unsafe();
-
-    public static Unsafe unsafe() {
-        try {
-            Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            return (Unsafe) field.get(null);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
 
     public static final int index(long key) {
-        return (int) Math.abs((key ^ (key >>> 32)) % BUCKET_SIZE);
+        return  Math.abs(Long.hashCode(key)) % BUCKET_SIZE;
     }
 
     public static String mem() {

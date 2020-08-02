@@ -11,7 +11,6 @@ public interface Constants {
     int MONITOR_TIME = 2000;
     int DEFAULT_SIZE = 8;
 
-    boolean GLOBAL_DIO = false;
     String LOG_PREFIX = "[LIBMETA_MGR] ";
 
     AtomicInteger LOG_COUNT = new AtomicInteger(10000);

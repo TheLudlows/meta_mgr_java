@@ -133,10 +133,10 @@ class WALBucket {
         int walOff = (int) (count * 64L * 8 - dataPosition);
         wal.position(walOff);
         walCount = walOff / 64 / 8;
-        int keyOff = 4;
         keyBuffer.position(count * 16 + 4);
 
-        LOG(dir + " walCount:" + walCount + " walOff:" + walOff + " keyOff:" + keyOff);
+        LOG(dir + " walCount:" + walCount + " walOff:" + walOff + " count:" + count );
+        int keyOff = 4;
         if (count > 0) {
             // recover
             for (int i = 0; i < count; i++) {
@@ -153,7 +153,7 @@ class WALBucket {
             }
         }
 
-        LOG("recover from " + dir + " count:" + count + " index size:" + index.size());
+        LOG(dir + " index size:" + index.size());
     }
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {

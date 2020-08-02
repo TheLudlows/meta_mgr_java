@@ -25,10 +25,11 @@ public class Versions {
         off[size++] = index;
     }
 
-    public Versions(int size) {
-        this.maxSize = size;
-        vs = new long[size];
-        off = new int[size];
+    public Versions(int maxSize) {
+        this.size = 0;
+        this.maxSize = maxSize;
+        vs = new long[maxSize];
+        off = new int[maxSize];
     }
 
     @Override
