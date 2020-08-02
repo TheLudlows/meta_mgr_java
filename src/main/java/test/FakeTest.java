@@ -13,7 +13,7 @@ import java.util.List;
  */
 public class FakeTest {
     static int thread_n = 30;
-    static int n = 300000;
+    static int n = 30000;
     static Thread[] ts = new Thread[thread_n];
 
     public static void main(String[] args) throws InterruptedException {

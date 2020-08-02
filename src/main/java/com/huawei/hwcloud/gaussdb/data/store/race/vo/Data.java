@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 @lombok.Data
 @AllArgsConstructor
@@ -34,5 +35,12 @@ public class Data implements Serializable {
         }
     }
 
-
+    @Override
+    public String toString() {
+        return "Data{" +
+                "key=" + key +
+                ", version=" + version +
+                ", field=" + Arrays.toString(field) +
+                '}';
+    }
 }

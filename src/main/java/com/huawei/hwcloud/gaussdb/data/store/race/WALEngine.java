@@ -14,8 +14,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.List;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.readCounter;
@@ -37,7 +35,6 @@ public class WALEngine implements DBEngine {
         this.dir = dir + "/";
         File f = new File(dir);
         if (!f.exists()) {
-            f.delete();
             f.mkdir();
         }
         buckets = new WALBucket[BUCKET_SIZE];
@@ -57,8 +54,8 @@ public class WALEngine implements DBEngine {
                 while (true) {
                     // buckets
                     buffer.setLength(0);
-                    for(WALBucket bucket : buckets) {
-                        buffer.append(bucket.dir +" " + bucket.count + " " + bucket.index.size() +"|");
+                    for (WALBucket bucket : buckets) {
+                        buffer.append(bucket.dir + " " + bucket.count + " " + bucket.index.size() + "|");
                     }
                     LOG(buffer.toString());
                     // request
@@ -96,7 +93,7 @@ public class WALEngine implements DBEngine {
 }
 
 class WALBucket {
-    public static final ThreadLocal<Data>  LOCAL_DATA = ThreadLocal.withInitial(()->new Data());
+    public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data());
     public static final DirectIOLib DIRECT_IO_LIB = DirectIOLib.getLibForPath("/");
     protected String dir;
     // 一个分区总共写入量
@@ -145,8 +142,8 @@ class WALBucket {
                 dataPosition = fileChannel.size();
             }
             tryRecover();
-        } catch (IOException e) {
-            LOG(e.getMessage());
+        } catch (Exception e) {
+            LOG_ERR("init bucket error", e);
         }
     }
 
@@ -154,17 +151,17 @@ class WALBucket {
         keyAddress = ((DirectBuffer) keyBuffer).address();
         writeBufAddress = ((DirectBuffer) writeBuf).address();
         walAddress = ((DirectBuffer) wal).address();
-
-        count = UNSAFE.getInt(keyAddress);
-        keyOff = 4;
-        walOff = count * 64 * 8L - dataPosition;
-        walCount = (int) (walOff / 64 / 8);
         LOG("keyAddress:" + keyAddress
                 + " writeBufAddress:" + writeBufAddress
                 + " walAddress:" + walAddress
                 + " walOff:" + walOff
                 + " keyOff:" + keyOff
         );
+        count = UNSAFE.getInt(keyAddress);
+        keyOff = 4;
+        walOff = count * 64L * 8 - dataPosition;
+        walCount = (int) (walOff / 64 / 8);
+
         if (count > 0) {
             // recover
             for (int i = 0; i < count; i++) {
@@ -177,7 +174,7 @@ class WALBucket {
                     versions = new Versions(DEFAULT_SIZE);
                     index.put(k, versions);
                 }
-                versions.add(v,i);
+                versions.add(v, i);
             }
         }
         LOG("recover from " + dir + " count:" + count + " index size:" + index.size());
@@ -192,7 +189,7 @@ class WALBucket {
             versions = new Versions(DEFAULT_SIZE);
             index.put(key, versions);
         }
-        versions.add(v,count);
+        versions.add(v, count);
 
         UNSAFE.putLong(keyAddress + keyOff, key);
         keyOff += 8;
@@ -217,14 +214,18 @@ class WALBucket {
         }
         Data data = LOCAL_DATA.get();
         data.reset();
+        data.setKey(k);
+        data.setVersion(v);
         long[] fields = data.getField();
+        boolean find = false;
         for (int i = 0; i < versions.size; i++) {
             long ver = versions.vs[i];
             if (ver <= v) {
+                find = true;
                 addFiled(versions.off[i], fields);
             }
         }
-        return data;
+        return find ? data : null;
     }
 
     private void flush_wal() throws IOException {
