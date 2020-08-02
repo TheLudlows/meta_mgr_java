@@ -2,14 +2,11 @@ package test;
 
 import com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRace;
 import com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl;
-import com.huawei.hwcloud.gaussdb.data.store.race.utils.Util;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG;
 
 /**
  * 模拟本地测试
@@ -17,38 +14,25 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG;
 public class FakeTest {
     static int thread_n = 30;
     static int n = 300000;
+    static Thread[] ts = new Thread[thread_n];
 
     public static void main(String[] args) throws InterruptedException {
         DataStoreRace store = new DataStoreRaceImpl();
         store.init("data");
         long start = System.currentTimeMillis();
-        Thread[] ts = new Thread[thread_n];
+
         for (int i = 0; i < thread_n; i++) {
             int x = i;
             ts[i] = new Thread(() -> write(store, x * n, (x + 1) * n));
         }
-
-        for (int i = 0; i < thread_n; i++) {
-            ts[i].start();
-        }
-
-        for (int i = 0; i < thread_n; i++) {
-            ts[i].join();
-        }
+        start();
         System.out.println("write over cost:" + ((System.currentTimeMillis() - start) / 1000));
         start = System.currentTimeMillis();
         for (int i = 0; i < thread_n; i++) {
             int x = i;
             ts[i] = new Thread(() -> read(store, x * n, (x + 1) * n));
         }
-        for (int i = 0; i < thread_n; i++) {
-            ts[i].start();
-        }
-
-        for (int i = 0; i < thread_n; i++) {
-            ts[i].join();
-        }
-
+        start();
         System.out.println("read cost: " + (System.currentTimeMillis() - start) / 1000);
         store.deInit();
     }
@@ -86,6 +70,16 @@ public class FakeTest {
                 deltaPacket.setDeltaItem(list);
                 dataStoreRace.writeDeltaPacket(deltaPacket);
             }
+        }
+    }
+
+    public static void start() throws InterruptedException {
+        for (int i = 0; i < thread_n; i++) {
+            ts[i].start();
+        }
+
+        for (int i = 0; i < thread_n; i++) {
+            ts[i].join();
         }
     }
 }

@@ -21,8 +21,7 @@ public class Util {
     }
 
     public static final int index(long key) {
-        //return (int) Math.abs((key ^ (key >>> 32)) % BUCKET_SIZE);
-        return (int) Math.abs(key % BUCKET_SIZE);
+        return (int) Math.abs((key ^ (key >>> 32)) % BUCKET_SIZE);
     }
 
     public static String mem() {

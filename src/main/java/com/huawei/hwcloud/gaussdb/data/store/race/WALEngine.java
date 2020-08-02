@@ -96,6 +96,7 @@ public class WALEngine implements DBEngine {
 }
 
 class WALBucket {
+    public static final ThreadLocal<Data>  LOCAL_DATA = ThreadLocal.withInitial(()->new Data());
     public static final DirectIOLib DIRECT_IO_LIB = DirectIOLib.getLibForPath("/");
     protected String dir;
     // 一个分区总共写入量
@@ -103,7 +104,7 @@ class WALBucket {
     // wal中的个数
     protected int walCount;
     // 索引
-    protected LongObjectHashMap<Tuple2<List<Long>, List<Integer>>> index;
+    protected LongObjectHashMap<Versions> index;
     // key version mapped buffer
     private MappedByteBuffer keyBuffer;
     // data wal， mapped 写入防止丢失
@@ -171,13 +172,12 @@ class WALBucket {
                 keyOff += 8;
                 long v = UNSAFE.getLong(keyAddress + keyOff);
                 keyOff += 8;
-                Tuple2<List<Long>, List<Integer>> versions = index.get(k);
+                Versions versions = index.get(k);
                 if (versions == null) {
-                    versions = new Tuple2<>(new ArrayList<>(), new ArrayList<>());
+                    versions = new Versions(DEFAULT_SIZE);
                     index.put(k, versions);
                 }
-                versions.a.add(v);
-                versions.b.add(i);
+                versions.add(v,i);
             }
         }
         LOG("recover from " + dir + " count:" + count + " index size:" + index.size());
@@ -187,13 +187,12 @@ class WALBucket {
     public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {
         long key = item.getKey();
 
-        Tuple2<List<Long>, List<Integer>> versions = index.get(key);
+        Versions versions = index.get(key);
         if (versions == null) {
-            versions = new Tuple2<>(new ArrayList<>(10), new ArrayList<>(10));
+            versions = new Versions(DEFAULT_SIZE);
             index.put(key, versions);
         }
-        versions.a.add(v);
-        versions.b.add(count);
+        versions.add(v,count);
 
         UNSAFE.putLong(keyAddress + keyOff, key);
         keyOff += 8;
@@ -212,19 +211,19 @@ class WALBucket {
     }
 
     public synchronized Data read(long k, long v) throws IOException {
-        Tuple2<List<Long>, List<Integer>> versions = index.get(k);
+        Versions versions = index.get(k);
         if (versions == null) {
             return null;
         }
-        Data data = new Data(k, v);
-        long[] fields = new long[64];
-        for (int i = 0; i < versions.a.size(); i++) {
-            long ver = versions.a.get(i);
+        Data data = LOCAL_DATA.get();
+        data.reset();
+        long[] fields = data.getField();
+        for (int i = 0; i < versions.size; i++) {
+            long ver = versions.vs[i];
             if (ver <= v) {
-                addFiled(versions.b.get(i), fields);
+                addFiled(versions.off[i], fields);
             }
         }
-        data.setField(fields);
         return data;
     }
 
@@ -241,10 +240,6 @@ class WALBucket {
             fileChannel.write(wal, dataPosition);
         }
         dataPosition += WAL_SIZE;
-    }
-
-    public void flush() {
-
     }
 
     private void addFiled(Integer n, long[] arr) throws IOException {

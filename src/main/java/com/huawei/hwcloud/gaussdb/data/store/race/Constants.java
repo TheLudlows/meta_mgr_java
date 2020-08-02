@@ -9,6 +9,7 @@ public interface Constants {
     int FILED_MAPPED_SIZE = 1024 * 1024 * 1024;
     int KEY_MAPPED_SIZE = 64 * 1024 * 1024;
     int MONITOR_TIME = 5000;
+    int DEFAULT_SIZE = 8;
 
     boolean GLOBAL_DIO = false;
     String LOG_PREFIX = "[LIBMETA_MGR] ";

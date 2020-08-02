@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 @lombok.Data
-@NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Data implements Serializable {
@@ -22,6 +21,18 @@ public class Data implements Serializable {
     public Data(long k, long v) {
         this.key = k;
         this.version = v;
+        this.field = new long[64];
     }
+
+    public Data() {
+        this.field = new long[64];
+    }
+
+    public void reset() {
+        for (int i=0;i<64;i++) {
+            field[i] = 0;
+        }
+    }
+
 
 }
