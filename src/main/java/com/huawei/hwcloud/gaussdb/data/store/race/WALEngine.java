@@ -131,7 +131,7 @@ class WALBucket {
                     .map(FileChannel.MapMode.READ_WRITE, 0, WAL_SIZE);
             keyBuffer = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE)
                     .map(FileChannel.MapMode.READ_WRITE, 0, KEY_MAPPED_SIZE);
-
+            LOG(dir + " open wal and keyBuffer ok");
             if (DIO_SUPPORT) {
                 this.directRandomAccessFile = new DirectRandomAccessFile(new File(dataFileName), "rw");
                 this.writeBuf = DirectIOUtils.allocateForDirectIO(DIRECT_IO_LIB, WAL_SIZE);
@@ -141,6 +141,8 @@ class WALBucket {
                 this.writeBuf = ByteBuffer.allocateDirect(WAL_SIZE);
                 dataPosition = fileChannel.size();
             }
+            LOG(dir + " open data file ok");
+
             tryRecover();
         } catch (Exception e) {
             LOG_ERR("init bucket error", e);
@@ -151,17 +153,20 @@ class WALBucket {
         keyAddress = ((DirectBuffer) keyBuffer).address();
         writeBufAddress = ((DirectBuffer) writeBuf).address();
         walAddress = ((DirectBuffer) wal).address();
-        LOG("keyAddress:" + keyAddress
+        LOG(dir + " keyAddress:" + keyAddress
                 + " writeBufAddress:" + writeBufAddress
                 + " walAddress:" + walAddress
-                + " walOff:" + walOff
-                + " keyOff:" + keyOff
+
         );
         count = UNSAFE.getInt(keyAddress);
         keyOff = 4;
         walOff = count * 64L * 8 - dataPosition;
         walCount = (int) (walOff / 64 / 8);
+        LOG(dir + " walCount:" + walCount
+                + " walOff:" + walOff
+                + " keyOff:" + keyOff
 
+        );
         if (count > 0) {
             // recover
             for (int i = 0; i < count; i++) {
