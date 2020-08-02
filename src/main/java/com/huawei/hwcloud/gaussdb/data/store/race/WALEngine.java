@@ -1,13 +1,8 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
 import com.carrotsearch.hppc.LongObjectHashMap;
-import com.huawei.hwcloud.gaussdb.data.store.race.utils.Tuple2;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
-import moe.cnkirito.kdio.DirectIOLib;
-import moe.cnkirito.kdio.DirectIOUtils;
-import moe.cnkirito.kdio.DirectRandomAccessFile;
-import sun.nio.ch.DirectBuffer;
 
 import java.io.File;
 import java.io.IOException;
@@ -94,7 +89,6 @@ public class WALEngine implements DBEngine {
 
 class WALBucket {
     public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data());
-    public static final DirectIOLib DIRECT_IO_LIB = DirectIOLib.getLibForPath("/");
     protected String dir;
     // 一个分区总共写入量
     protected int count;
@@ -108,20 +102,11 @@ class WALBucket {
     private MappedByteBuffer wal;
     // 文件中的位置
     private long dataPosition;
-    private long keyOff;
-    private long walOff;
-    private long keyAddress;
-    private long walAddress;
-    private long writeBufAddress;
     private ByteBuffer writeBuf;
-    private boolean DIO_SUPPORT;
-    private DirectRandomAccessFile directRandomAccessFile;
     private FileChannel fileChannel;
 
     public WALBucket(String dir) {
         try {
-            //this.DIO_SUPPORT = DirectIOLib.binit;
-            this.DIO_SUPPORT = GLOBAL_DIO;
             this.dir = dir;
             index = new LongObjectHashMap<>();
             String dataWALName = dir + ".data.wal";
@@ -132,15 +117,9 @@ class WALBucket {
             keyBuffer = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE)
                     .map(FileChannel.MapMode.READ_WRITE, 0, KEY_MAPPED_SIZE);
             LOG(dir + " open wal and keyBuffer ok");
-            if (DIO_SUPPORT) {
-                this.directRandomAccessFile = new DirectRandomAccessFile(new File(dataFileName), "rw");
-                this.writeBuf = DirectIOUtils.allocateForDirectIO(DIRECT_IO_LIB, WAL_SIZE);
-                dataPosition = directRandomAccessFile.length();
-            } else {
-                this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
-                this.writeBuf = ByteBuffer.allocateDirect(WAL_SIZE);
-                dataPosition = fileChannel.size();
-            }
+            this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
+            this.writeBuf = ByteBuffer.allocateDirect(WAL_SIZE);
+            dataPosition = fileChannel.size();
             LOG(dir + " open data file ok");
 
             tryRecover();
@@ -150,29 +129,20 @@ class WALBucket {
     }
 
     private void tryRecover() {
-        keyAddress = ((DirectBuffer) keyBuffer).address();
-        writeBufAddress = ((DirectBuffer) writeBuf).address();
-        walAddress = ((DirectBuffer) wal).address();
-        LOG(dir + " keyAddress:" + keyAddress
-                + " writeBufAddress:" + writeBufAddress
-                + " walAddress:" + walAddress
+        count = keyBuffer.getInt(0);
+        int walOff = (int) (count * 64L * 8 - dataPosition);
+        wal.position(walOff);
+        walCount = walOff / 64 / 8;
+        int keyOff = 4;
+        keyBuffer.position(count * 16 + 4);
 
-        );
-        count = UNSAFE.getInt(keyAddress);
-        keyOff = 4;
-        walOff = count * 64L * 8 - dataPosition;
-        walCount = (int) (walOff / 64 / 8);
-        LOG(dir + " walCount:" + walCount
-                + " walOff:" + walOff
-                + " keyOff:" + keyOff
-
-        );
+        LOG(dir + " walCount:" + walCount + " walOff:" + walOff + " keyOff:" + keyOff);
         if (count > 0) {
             // recover
             for (int i = 0; i < count; i++) {
-                long k = UNSAFE.getLong(keyAddress + keyOff);
+                long k = keyBuffer.getLong(keyOff);
                 keyOff += 8;
-                long v = UNSAFE.getLong(keyAddress + keyOff);
+                long v = keyBuffer.getLong(keyOff);
                 keyOff += 8;
                 Versions versions = index.get(k);
                 if (versions == null) {
@@ -182,8 +152,8 @@ class WALBucket {
                 versions.add(v, i);
             }
         }
-        LOG("recover from " + dir + " count:" + count + " index size:" + index.size());
 
+        LOG("recover from " + dir + " count:" + count + " index size:" + index.size());
     }
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {
@@ -196,19 +166,17 @@ class WALBucket {
         }
         versions.add(v, count);
 
-        UNSAFE.putLong(keyAddress + keyOff, key);
-        keyOff += 8;
-        UNSAFE.putLong(keyAddress + keyOff, v);
-        keyOff += 8;
-        UNSAFE.putInt(keyAddress, ++count);
+        keyBuffer.putLong(key);
+        keyBuffer.putLong(v);
+        keyBuffer.putInt(0, ++count);
+
         for (long l : item.getDelta()) {
-            UNSAFE.putLong(walAddress + walOff, l);
-            walOff += 8;
+            wal.putLong(l);
         }
         if (++walCount == WAL_COUNT) {
             flush_wal();
             walCount = 0;
-            walOff = 0;
+            wal.position(0);
         }
     }
 
@@ -235,16 +203,9 @@ class WALBucket {
 
     private void flush_wal() throws IOException {
         // flush to file
-        if (DIO_SUPPORT) {
-            UNSAFE.copyMemory(null, walAddress, null, writeBufAddress, WAL_SIZE);
-            writeBuf.position(0);
-            writeBuf.limit(WAL_SIZE);
-            directRandomAccessFile.write(writeBuf, dataPosition);
-        } else {
-            wal.position(0);
-            wal.limit(WAL_SIZE);
-            fileChannel.write(wal, dataPosition);
-        }
+        wal.position(0);
+        wal.limit(WAL_SIZE);
+        fileChannel.write(wal, dataPosition);
         dataPosition += WAL_SIZE;
     }
 
@@ -254,19 +215,15 @@ class WALBucket {
             // 在wal中
             int walPos = (int) (pos - dataPosition);
             for (int i = 0; i < 64; i++) {
-                arr[i] += UNSAFE.getLong(walAddress + walPos + i * 8);
+                arr[i] += wal.getLong(walPos + i * 8);
             }
         } else {
             // 在文件中
             writeBuf.position(0);
             writeBuf.limit(64 * 8);
-            if (DIO_SUPPORT) {
-                directRandomAccessFile.read(writeBuf, pos);
-            } else {
-                fileChannel.read(writeBuf, pos);
-            }
+            fileChannel.read(writeBuf, pos);
             for (int i = 0; i < 64; i++) {
-                arr[i] += UNSAFE.getLong(writeBufAddress + i * 8);
+                arr[i] += writeBuf.getLong(i * 8);
             }
         }
     }
