@@ -6,8 +6,8 @@ import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 import java.util.List;
 import java.util.concurrent.atomic.LongAdder;
 
-import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG_ERR;
+import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
+import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
 import static java.lang.System.exit;
 
 

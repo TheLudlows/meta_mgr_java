@@ -13,8 +13,7 @@ import java.nio.channels.FileChannel;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.readCounter;
 import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.writeCounter;
-import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.index;
-import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.mem;
+import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
 import static java.nio.file.StandardOpenOption.*;
 
 /**
@@ -179,7 +178,7 @@ class WALBucket {
             }
         }
 
-        LOG(dir + " index size:" + index.size()  + " walCount:" + walCount);
+        LOG(dir + " index size:" + index.size() + " walCount:" + walCount);
     }
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {
