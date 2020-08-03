@@ -118,7 +118,6 @@ class WALBucket {
             String dataWALName = dir + ".data.wal";
             String keyWALName = dir + ".key.wal";
             String counter = dir + ".count";
-
             String dataFileName = dir + ".data";
             String keyFileName = dir + ".key";
             wal = FileChannel.open(new File(dataWALName).toPath(), CREATE, READ, WRITE)
@@ -128,13 +127,11 @@ class WALBucket {
             counterBuf = FileChannel.open(new File(counter).toPath(), CREATE, READ, WRITE)
                     .map(FileChannel.MapMode.READ_WRITE, 0, 4);
 
-            LOG(dir + " open wal and keyWal ok");
             this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
             this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
             this.writeBuf = ByteBuffer.allocateDirect(WAL_SIZE);
             dataPosition = fileChannel.size();
             keyPosition = keyChannel.size();
-            LOG(dir + " open data file ok");
 
             tryRecover();
         } catch (Throwable e) {
@@ -148,8 +145,7 @@ class WALBucket {
         keyWal.position(walCount * 16);
         int fileCount = (int) (keyPosition / 16);
         this.count = walCount + fileCount;
-        LOG(dir + " walCount:" + walCount + " walOff:");
-        // 恢复file的索引
+        // 恢复文件数据的索引
         ByteBuffer buf = ByteBuffer.allocate(fileCount * 16);
         keyChannel.read(buf, 0);
         buf.flip();
@@ -165,6 +161,7 @@ class WALBucket {
             }
             versions.add(v, off++);
         }
+        // wal中的索引
         int walOff = 0;
         if (walCount > 0) {
             // recover
@@ -182,7 +179,7 @@ class WALBucket {
             }
         }
 
-        LOG(dir + " index size:" + index.size());
+        LOG(dir + " index size:" + index.size()  + " walCount:" + walCount);
     }
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {
@@ -197,16 +194,16 @@ class WALBucket {
 
         keyWal.putLong(key);
         keyWal.putLong(v);
-        counterBuf.putInt(0, ++walCount);
         for (long l : item.getDelta()) {
             wal.putLong(l);
         }
-        if (walCount == WAL_COUNT) {
+        if (++walCount == WAL_COUNT) {
             flush_wal();
             walCount = 0;
             wal.position(0);
             keyWal.position(0);
         }
+        counterBuf.putInt(0, walCount);
     }
 
     public synchronized Data read(long k, long v) throws IOException {

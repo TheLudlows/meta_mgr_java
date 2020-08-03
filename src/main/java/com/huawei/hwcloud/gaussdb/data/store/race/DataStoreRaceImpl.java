@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.LongAdder;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.LOG_ERR;
+import static java.lang.System.exit;
 
 
 public class DataStoreRaceImpl implements DataStoreRace {
@@ -54,6 +55,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
             }
         } catch (Throwable e) {
             LOG_ERR("writeDeltaPacket ", e);
+            exit(1);
         }
     }
 
