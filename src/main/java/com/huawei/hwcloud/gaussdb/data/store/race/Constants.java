@@ -3,10 +3,10 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public interface Constants {
-    int WAL_SIZE = 1024 * 64;
+    int WAL_SIZE = 1024 * 128;
     int WAL_COUNT = WAL_SIZE / 64 / 8;
     int BUCKET_SIZE = 30;
-    int KEY_MAPPED_SIZE = 64 * 1024 * 1024;
+    int KEY_MAPPED_SIZE = WAL_COUNT * 16;
     int MONITOR_TIME = 2000;
     int DEFAULT_SIZE = 8;
 
