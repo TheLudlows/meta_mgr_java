@@ -97,7 +97,7 @@ class WALBucket {
     protected int walCount;
     // 索引
     protected LongObjectHashMap<Versions> index;
-    // key version mapped buffer
+    // key version wal
     private MappedByteBuffer keyWal;
     // data wal， mapped 写入防止丢失
     private MappedByteBuffer wal;
@@ -128,7 +128,7 @@ class WALBucket {
 
             this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
             this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
-            this.writeBuf = ByteBuffer.allocateDirect(WAL_SIZE);
+            this.writeBuf = ByteBuffer.allocateDirect(64*8);
             dataPosition = fileChannel.size();
             keyPosition = keyChannel.size();
 
@@ -190,18 +190,21 @@ class WALBucket {
             index.put(key, versions);
         }
         versions.add(v, count++);
-
+        // y-version wal
         keyWal.putLong(key);
         keyWal.putLong(v);
+        // field wal
         for (long l : item.getDelta()) {
             wal.putLong(l);
         }
+        // wal full
         if (++walCount == WAL_COUNT) {
             flush_wal();
             walCount = 0;
             wal.position(0);
             keyWal.position(0);
         }
+
         counterBuf.putInt(0, walCount);
     }
 
@@ -249,7 +252,6 @@ class WALBucket {
         } else {
             // 在文件中
             writeBuf.position(0);
-            writeBuf.limit(64 * 8);
             fileChannel.read(writeBuf, pos);
             for (int i = 0; i < 64; i++) {
                 arr[i] += writeBuf.getLong(i * 8);

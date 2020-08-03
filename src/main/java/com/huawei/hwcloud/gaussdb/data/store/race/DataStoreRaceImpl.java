@@ -19,7 +19,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
     @Override
     public boolean init(String dir) {
         try {
-            writeCounter = new LongAdder();
+           writeCounter = new LongAdder();
             readCounter = new LongAdder();
             LOG("Init dir:" + dir);
             dbEngine = new WALEngine(dir);

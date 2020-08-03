@@ -2,15 +2,15 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 
 public interface Constants {
     /**
-     * filed wal size
+     * filed ta wal size 128kb
      */
     int WAL_SIZE = 1024 * 128;
     /**
-     * wal count
+     * wal count 4kb
      */
     int WAL_COUNT = WAL_SIZE / 64 / 8;
 
-    int BUCKET_SIZE = 30;
+    int BUCKET_SIZE = 32;
     /**
      * key-v wal size
      */
@@ -18,11 +18,11 @@ public interface Constants {
     /**
      * 监控时间
      */
-    int MONITOR_TIME = 2000;
+    int MONITOR_TIME = 5000;
     /**
      * 默认数组长度
      * map<key,<[DEFAULT_SIZE]>
      */
-    int DEFAULT_SIZE = 8;
+    int DEFAULT_SIZE = 10;
 
 }
