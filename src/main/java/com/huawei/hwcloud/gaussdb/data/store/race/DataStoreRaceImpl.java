@@ -18,13 +18,13 @@ public class DataStoreRaceImpl implements DataStoreRace {
     @Override
     public boolean init(String dir) {
         try {
-            this.writeCounter = new LongAdder();
+            writeCounter = new LongAdder();
             readCounter = new LongAdder();
             LOG("Init dir:" + dir);
             dbEngine = new WALEngine(dir);
             dbEngine.init();
             return true;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOG_ERR("init ", e);
         }
         return false;
@@ -36,7 +36,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
             LOG("all request:" + writeCounter.sum());
             LOG("all read:" + readCounter.sum());
             dbEngine.print();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOG_ERR("deInit ", e);
         }
     }
@@ -52,7 +52,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
                 DeltaPacket.DeltaItem item = list.get(i);
                 dbEngine.write(v, item);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOG_ERR("writeDeltaPacket ", e);
         }
     }
@@ -66,7 +66,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
                 LOG("empty data key" + key + " v " + version);
             }
             return data;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOG_ERR("readDataByVersion ", e);
         }
         return null;

@@ -19,7 +19,7 @@ public interface Constants {
             System.out.println(LOG_PREFIX + s);
     }
 
-    static void LOG_ERR(String s, Exception e) {
+    static void LOG_ERR(String s, Throwable e) {
         if (LOG_COUNT.decrementAndGet() > 0) {
             System.out.print(LOG_PREFIX + s);
             e.printStackTrace();

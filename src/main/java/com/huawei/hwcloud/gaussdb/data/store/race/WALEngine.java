@@ -17,7 +17,7 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
 import static java.nio.file.StandardOpenOption.*;
 
 /**
- * version :mapped file
+ * key - version :mapped file
  * fields :wal -> channel write
  */
 public class WALEngine implements DBEngine {
@@ -124,7 +124,7 @@ class WALBucket {
             LOG(dir + " open data file ok");
 
             tryRecover();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOG_ERR("init bucket error", e);
         }
     }
