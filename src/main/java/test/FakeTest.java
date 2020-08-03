@@ -41,7 +41,7 @@ public class FakeTest {
         for (int i = ks; i < ke; i++) {
             Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/3);
             if (data != null) {
-                if (data.getField()[0] != i * 8) {
+                if (data.getField()[0] != i * 4) {
                     System.out.println(i);
                 }
             }
@@ -58,7 +58,7 @@ public class FakeTest {
 
     public static void write(DataStoreRace dataStoreRace, int ks, int ke) {
         for (int i = ks; i < ke; i++) {
-            for (int j = 0; j < 5; j++) {
+            for (int j = 0; j < 8; j++) {
                 DeltaPacket deltaPacket = new DeltaPacket();
                 deltaPacket.setDeltaCount(1L);
                 deltaPacket.setVersion(j);

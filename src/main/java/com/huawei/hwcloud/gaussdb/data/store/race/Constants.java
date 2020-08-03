@@ -5,8 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public interface Constants {
     int WAL_SIZE = 1024 * 64;
     int WAL_COUNT = WAL_SIZE / 64 / 8;
-    int BUCKET_SIZE = 32;
-    int FILED_MAPPED_SIZE = 1024 * 1024 * 1024;
+    int BUCKET_SIZE = 30;
     int KEY_MAPPED_SIZE = 64 * 1024 * 1024;
     int MONITOR_TIME = 2000;
     int DEFAULT_SIZE = 8;

@@ -11,7 +11,7 @@ public class Versions {
     public void add(long v, int index) {
         if (size == maxSize) {
             //resize
-            maxSize +=2;
+            maxSize += 2;
             long[] tempVS = new long[maxSize];
             System.arraycopy(vs,0,tempVS,0,size);
 

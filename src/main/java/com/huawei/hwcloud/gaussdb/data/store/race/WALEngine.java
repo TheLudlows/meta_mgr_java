@@ -17,13 +17,13 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
 import static java.nio.file.StandardOpenOption.*;
 
 /**
- * y version :mapped file
+ * version :mapped file
  * fields :wal -> channel write
  */
 public class WALEngine implements DBEngine {
     private String dir;
     private WALBucket buckets[];
-    // print bucket
+    // 数据监控线程
     private Thread backPrint;
 
     public WALEngine(String dir) {
@@ -40,6 +40,7 @@ public class WALEngine implements DBEngine {
         for (int i = 0; i < BUCKET_SIZE; i++) {
             buckets[i] = new WALBucket(dir + i);
         }
+        // 后台监控线程
         backPrint = new Thread(() ->
         {
             try {
