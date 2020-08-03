@@ -14,7 +14,7 @@ public class Util {
         long total = run.totalMemory() / 1024 / 1024;
         long free = run.freeMemory() / 1024 / 1024;
         long usable = max - total + free;
-        return ("Max = " + max + "M Total = " + total + "M free = " + free + "M Usable = " + usable + "M");
+        return ("[JVM MEM]Max = " + max + "M, Total = " + total + "M, free = " + free + "M, Usable = " + usable + "M");
     }
 
 }

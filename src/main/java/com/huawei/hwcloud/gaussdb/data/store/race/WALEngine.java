@@ -13,7 +13,8 @@ import java.nio.channels.FileChannel;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.readCounter;
 import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.writeCounter;
-import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
+import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.index;
+import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.mem;
 import static java.nio.file.StandardOpenOption.*;
 
 /**
@@ -32,6 +33,16 @@ public class WALEngine implements DBEngine {
         if (!f.exists()) {
             f.mkdir();
         }
+        new Thread(() -> {
+            try {
+                while (true) {
+                    LOG(mem());
+                    Thread.sleep(MONITOR_TIME);
+                }
+            } catch (InterruptedException e) {
+                LOG_ERR("InterruptedException", e);
+            }
+        }).start();
         buckets = new WALBucket[BUCKET_SIZE];
     }
 
@@ -58,7 +69,6 @@ public class WALEngine implements DBEngine {
                     long read = readCounter.sum();
                     long write = writeCounter.sum();
                     LOG("last read:" + (read - lastRead) + " last write:" + (write - lastWrite));
-                    LOG(mem());
                     lastRead = read;
                     lastWrite = write;
                     Thread.sleep(MONITOR_TIME);
@@ -97,13 +107,14 @@ class WALBucket {
     protected int walCount;
     // 索引
     protected LongObjectHashMap<Versions> index;
-    // key version mapped buffer
-    private MappedByteBuffer keyBuffer;
+    private FileChannel keyChannel;
+    private ByteBuffer keyWriteBuffer;
+    private long keyPosition;
     // data wal， mapped 写入防止丢失
     private MappedByteBuffer wal;
     // 文件中的位置
     private long dataPosition;
-    private ByteBuffer writeBuf;
+    private ByteBuffer readBuffer;
     private FileChannel fileChannel;
 
     public WALBucket(String dir) {
@@ -115,12 +126,15 @@ class WALBucket {
             String keyFileName = dir + ".key";
             wal = FileChannel.open(new File(dataWALName).toPath(), CREATE, READ, WRITE)
                     .map(FileChannel.MapMode.READ_WRITE, 0, WAL_SIZE);
-            keyBuffer = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE)
-                    .map(FileChannel.MapMode.READ_WRITE, 0, KEY_MAPPED_SIZE);
+            keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
+            //keyBuffer = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE)
+            //.map(FileChannel.MapMode.READ_WRITE, 0, KEY_MAPPED_SIZE);
             LOG(dir + " open wal and keyBuffer ok");
             this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
-            this.writeBuf = ByteBuffer.allocateDirect(WAL_SIZE);
+            this.readBuffer = ByteBuffer.allocateDirect(64*8);
+            this.keyWriteBuffer = ByteBuffer.allocateDirect(16);
             dataPosition = fileChannel.size();
+            keyPosition = keyChannel.size();
             LOG(dir + " open data file ok");
 
             tryRecover();
@@ -129,22 +143,22 @@ class WALBucket {
         }
     }
 
-    private void tryRecover() {
-        count = keyBuffer.getInt(0);
+    private void tryRecover() throws IOException {
+        //count = keyBuffer.getInt(0);
+        count = (int) (keyPosition/16);
         int walOff = (int) (count * 64L * 8 - dataPosition);
         wal.position(walOff);
         walCount = walOff / 64 / 8;
-        keyBuffer.position(count * 16 + 4);
-
-        LOG(dir + " walCount:" + walCount + " walOff:" + walOff + " count:" + count );
-        int keyOff = 4;
+        LOG(dir + " walCount:" + walCount + " walOff:" + walOff + " count:" + count);
         if (count > 0) {
             // recover
+            ByteBuffer buffer = ByteBuffer.allocateDirect(count * 16);
+            keyChannel.read(buffer);
+            buffer.flip();
+
             for (int i = 0; i < count; i++) {
-                long k = keyBuffer.getLong(keyOff);
-                keyOff += 8;
-                long v = keyBuffer.getLong(keyOff);
-                keyOff += 8;
+                long k = buffer.getLong();
+                long v = buffer.getLong();
                 Versions versions = index.get(k);
                 if (versions == null) {
                     versions = new Versions(DEFAULT_SIZE);
@@ -165,11 +179,13 @@ class WALBucket {
             versions = new Versions(DEFAULT_SIZE);
             index.put(key, versions);
         }
-        versions.add(v, count);
+        versions.add(v, count++);
 
-        keyBuffer.putLong(key);
-        keyBuffer.putLong(v);
-        keyBuffer.putInt(0, ++count);
+        keyWriteBuffer.putLong(0,key);
+        keyWriteBuffer.putLong(8,v);
+        keyWriteBuffer.position(0);
+        keyChannel.write(keyWriteBuffer, keyPosition);
+        keyPosition += 16;
 
         for (long l : item.getDelta()) {
             wal.putLong(l);
@@ -220,11 +236,10 @@ class WALBucket {
             }
         } else {
             // 在文件中
-            writeBuf.position(0);
-            writeBuf.limit(64 * 8);
-            fileChannel.read(writeBuf, pos);
+            readBuffer.position(0);
+            fileChannel.read(readBuffer, pos);
             for (int i = 0; i < 64; i++) {
-                arr[i] += writeBuf.getLong(i * 8);
+                arr[i] += readBuffer.getLong(i * 8);
             }
         }
     }
