@@ -249,11 +249,7 @@ class WALBucket {
         data.setKey(k);
         data.setVersion(v);
         long[] fields = data.getField();
-        //
         int func = versions.queryFunc(v);
-        if(k == 11) {
-            System.out.println(versions);
-        }
         if (func == 0) {
             return null;
         } else if (func == 1) {
@@ -264,12 +260,13 @@ class WALBucket {
             int firstMeet = firstLarge(v, versions.vs, 0, size - 1);
             int lastMeet = lastLarge(v, versions.vs, 0, size - 1);
             if(versions.off[lastMeet]*64L*8 < dataPosition) { //all in file
-                if (versions.off[lastMeet] - versions.off[firstMeet] <= 8) {
+                if (versions.off[lastMeet] - versions.off[firstMeet] < 8) {
                     // meet
                     addMeetVersion(firstMeet, lastMeet, fields, versions,v);
                     return data;
                 }
             }
+
             /*int firstUnMeet = firstLess(v, versions.vs, 0, size - 1);
             int lastUnMet = lastLess(v, versions.vs, 0, size - 1);
             if(versions.off[lastMeet] < dataPosition) { // all in file
@@ -295,12 +292,13 @@ class WALBucket {
         ByteBuffer readBuf = LOCAL_READ_BUF.get();
         readBuf.position(0);
         readBuf.limit(64*8*8);
-        long pos = versions.off[firstMeet]* 64* 8;
+        long pos = versions.off[firstMeet]* 64L* 8;
         fileChannel.read(readBuf, pos);
-        for(int i = 0,from = firstMeet;from<=lastMeet;i++,from++) {
+        for(int from = firstMeet;from<=lastMeet;from++) {
+            int base = (versions.off[from] - versions.off[firstMeet])*64*8;
             if(versions.vs[from] <= v) {
                 for (int j = 0; j < 64; j++) {
-                    fields[j] += readBuf.getLong(i*64*8 +j * 8);
+                    fields[j] += readBuf.getLong(base + j * 8);
                 }
             }
         }
