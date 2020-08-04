@@ -33,5 +33,20 @@ public class DeltaPacket implements Serializable {
         private long key;
 
         private long[] delta;
+
+        @Override
+        public String toString() {
+            return "DeltaItem{" +
+                    "key=" + key + '}';
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "DeltaPacket{" +
+                "version=" + version +
+                ", deltaCount=" + deltaCount +
+                ", deltaItem=" + deltaItem +
+                '}';
     }
 }

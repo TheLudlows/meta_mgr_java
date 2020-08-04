@@ -6,8 +6,7 @@ import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 import java.util.List;
 import java.util.concurrent.atomic.LongAdder;
 
-import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
-import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
+import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
 import static java.lang.System.exit;
 
 
@@ -34,7 +33,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
     @Override
     public void deInit() {
         try {
-            LOG("all request:" + writeCounter.sum());
+            LOG("all write:" + writeCounter.sum());
             LOG("all read:" + readCounter.sum());
             dbEngine.print();
             dbEngine.close();

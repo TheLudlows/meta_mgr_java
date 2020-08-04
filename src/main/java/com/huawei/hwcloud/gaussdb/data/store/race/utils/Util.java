@@ -8,7 +8,7 @@ public class Util {
 
     public static final String LOG_PREFIX = "[LIBMETA_MGR] ";
 
-    public static final AtomicInteger LOG_COUNT = new AtomicInteger(10000);
+    public static final AtomicInteger LOG_COUNT = new AtomicInteger(5000);
 
     public static final int index(long key) {
         return Math.abs(Long.hashCode(key)) % BUCKET_SIZE;

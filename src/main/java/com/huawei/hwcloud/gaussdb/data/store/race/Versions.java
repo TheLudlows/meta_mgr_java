@@ -6,12 +6,12 @@ public class Versions {
     protected long[] vs;
     protected int[] off;
     protected int size;
-    protected int maxSize;
 
     public void add(long v, int index) {
+        int maxSize = vs.length;
         if (size == maxSize) {
             //resize
-            maxSize += 2;
+            maxSize *= 2;
             long[] tempVS = new long[maxSize];
             System.arraycopy(vs,0,tempVS,0,size);
 
@@ -27,7 +27,6 @@ public class Versions {
 
     public Versions(int maxSize) {
         this.size = 0;
-        this.maxSize = maxSize;
         vs = new long[maxSize];
         off = new int[maxSize];
     }
@@ -38,7 +37,6 @@ public class Versions {
                 "vs=" + Arrays.toString(vs) +
                 ", off=" + Arrays.toString(off) +
                 ", count=" + size +
-                ", size=" + maxSize +
                 '}';
     }
 

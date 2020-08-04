@@ -58,7 +58,7 @@ public class WALEngine implements DBEngine {
                     // request
                     long read = readCounter.sum();
                     long write = writeCounter.sum();
-                    LOG("Last" + MONITOR_TIME + "ms,read" + (read - lastRead) + ",write:" + (write - lastWrite));
+                    LOG("Last" + MONITOR_TIME + "ms,read:" + (read - lastRead) + ",write:" + (write - lastWrite));
                     LOG(mem());
                     lastRead = read;
                     lastWrite = write;
@@ -190,7 +190,7 @@ class WALBucket {
             }
         }
 
-        LOG(dir + " index size:" + index.size() + " walCount:" + walCount);
+        //LOG(dir + " index size:" + index.size() + " walCount:" + walCount);
     }
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {

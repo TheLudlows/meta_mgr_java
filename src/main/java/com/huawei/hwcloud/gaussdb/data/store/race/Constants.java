@@ -23,6 +23,6 @@ public interface Constants {
      * 默认数组长度
      * map<key,<[DEFAULT_SIZE]>
      */
-    int DEFAULT_SIZE = 12;
+    int DEFAULT_SIZE = 6;
 
 }
