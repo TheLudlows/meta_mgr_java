@@ -18,15 +18,11 @@ public class Data implements Serializable {
 
     private long[] field;
 
-
-    public Data(long k, long v) {
-        this.key = k;
-        this.version = v;
-        this.field = new long[64];
+    public Data() {
     }
 
-    public Data() {
-        this.field = new long[64];
+    public Data(int size) {
+        this.field = new long[size];
     }
 
     public void reset() {

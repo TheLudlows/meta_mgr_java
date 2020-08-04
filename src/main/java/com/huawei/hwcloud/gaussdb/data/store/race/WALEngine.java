@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.readCounter;
@@ -23,6 +24,7 @@ import static java.nio.file.StandardOpenOption.*;
 public class WALEngine implements DBEngine {
     private String dir;
     private WALBucket buckets[];
+    private volatile boolean stop = false;
     // 数据监控线程
     private Thread backPrint;
 
@@ -47,13 +49,13 @@ public class WALEngine implements DBEngine {
                 StringBuffer buffer = new StringBuffer();
                 long lastWrite = 0;
                 long lastRead = 0;
-                while (true) {
-                    // buckets
-                    buffer.setLength(0);
+                while (!stop) {
+                    // buckets info
+                   /* buffer.setLength(0);
                     for (WALBucket bucket : buckets) {
                         buffer.append(bucket.dir + " " + bucket.count + " " + bucket.index.size() + "|");
                     }
-                    LOG(buffer.toString());
+                    LOG(buffer.toString());*/
                     // request
                     long read = readCounter.sum();
                     long write = writeCounter.sum();
@@ -86,10 +88,22 @@ public class WALEngine implements DBEngine {
     public Data read(long key, long v) throws IOException {
         return buckets[index(key)].read(key, v);
     }
+
+    @Override
+    public void close() {
+        this.stop = true;
+        try {
+            backPrint.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 }
 
 class WALBucket {
-    public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data());
+    public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data(64));
+    public static final ThreadLocal<ByteBuffer> LOCAL_READ_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
+
     protected String dir;
     // 一个分区总共写入量
     protected int count;
@@ -104,9 +118,8 @@ class WALBucket {
     // wal count
     private MappedByteBuffer counterBuf;
     // 文件中的位置
-    private long dataPosition;
+    private volatile long dataPosition;
     private long keyPosition;
-    private ByteBuffer writeBuf;
     private FileChannel fileChannel;
     private FileChannel keyChannel;
 
@@ -128,7 +141,6 @@ class WALBucket {
 
             this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
             this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
-            this.writeBuf = ByteBuffer.allocateDirect(64*8);
             dataPosition = fileChannel.size();
             keyPosition = keyChannel.size();
 
@@ -145,7 +157,7 @@ class WALBucket {
         int fileCount = (int) (keyPosition / 16);
         this.count = walCount + fileCount;
         // 恢复文件数据的索引
-        ByteBuffer buf = ByteBuffer.allocate(fileCount * 16);
+        ByteBuffer buf = ByteBuffer.allocate((int) keyPosition);
         keyChannel.read(buf, 0);
         buf.flip();
         int off = 0;
@@ -190,7 +202,7 @@ class WALBucket {
             index.put(key, versions);
         }
         versions.add(v, count++);
-        // y-version wal
+        // key-version wal
         keyWal.putLong(key);
         keyWal.putLong(v);
         // field wal
@@ -208,10 +220,15 @@ class WALBucket {
         counterBuf.putInt(0, walCount);
     }
 
-    public synchronized Data read(long k, long v) throws IOException {
-        Versions versions = index.get(k);
-        if (versions == null) {
-            return null;
+    public Data read(long k, long v) throws IOException {
+        Versions versions;
+        int size;
+        synchronized (this) {
+            versions = index.get(k);
+            if (versions == null) {
+                return null;
+            }
+            size = versions.size;
         }
         Data data = LOCAL_DATA.get();
         data.reset();
@@ -219,7 +236,7 @@ class WALBucket {
         data.setVersion(v);
         long[] fields = data.getField();
         boolean find = false;
-        for (int i = 0; i < versions.size; i++) {
+        for (int i = 0; i < size; i++) {
             long ver = versions.vs[i];
             if (ver <= v) {
                 find = true;
@@ -251,10 +268,11 @@ class WALBucket {
             }
         } else {
             // 在文件中
-            writeBuf.position(0);
-            fileChannel.read(writeBuf, pos);
+            ByteBuffer readBuf = LOCAL_READ_BUF.get();
+            readBuf.position(0);
+            fileChannel.read(readBuf, pos);
             for (int i = 0; i < 64; i++) {
-                arr[i] += writeBuf.getLong(i * 8);
+                arr[i] += readBuf.getLong(i * 8);
             }
         }
     }

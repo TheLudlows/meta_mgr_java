@@ -25,4 +25,6 @@ public interface DBEngine {
     void print();
 
     Data read(long key, long v) throws IOException;
+
+    void close();
 }
