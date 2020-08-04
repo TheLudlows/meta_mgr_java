@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.readCounter;
@@ -59,7 +58,7 @@ public class WALEngine implements DBEngine {
                     // request
                     long read = readCounter.sum();
                     long write = writeCounter.sum();
-                    LOG("last read:" + (read - lastRead) + " last write:" + (write - lastWrite));
+                    LOG("Last" + MONITOR_TIME + "ms,read" + (read - lastRead) + ",write:" + (write - lastWrite));
                     LOG(mem());
                     lastRead = read;
                     lastWrite = write;
@@ -126,6 +125,7 @@ class WALBucket {
     public WALBucket(String dir) {
         try {
             this.dir = dir;
+            // 自动扩容吧
             index = new LongObjectHashMap<>();
             String dataWALName = dir + ".data.wal";
             String keyWALName = dir + ".key.wal";
@@ -196,12 +196,6 @@ class WALBucket {
     public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {
         long key = item.getKey();
 
-        Versions versions = index.get(key);
-        if (versions == null) {
-            versions = new Versions(DEFAULT_SIZE);
-            index.put(key, versions);
-        }
-        versions.add(v, count++);
         // key-version wal
         keyWal.putLong(key);
         keyWal.putLong(v);
@@ -216,20 +210,22 @@ class WALBucket {
             wal.position(0);
             keyWal.position(0);
         }
-
         counterBuf.putInt(0, walCount);
+
+        Versions versions = index.get(key);
+        if (versions == null) {
+            versions = new Versions(DEFAULT_SIZE);
+            index.put(key, versions);
+        }
+        versions.add(v, count++);
     }
 
     public Data read(long k, long v) throws IOException {
-        Versions versions;
-        int size;
-        synchronized (this) {
-            versions = index.get(k);
-            if (versions == null) {
-                return null;
-            }
-            size = versions.size;
+        Versions versions = index.get(k);
+        if (versions == null) {
+            return null;
         }
+        int size = versions.size;
         Data data = LOCAL_DATA.get();
         data.reset();
         data.setKey(k);
