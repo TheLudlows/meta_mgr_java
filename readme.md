@@ -3,7 +3,7 @@
 ```shell
 rm meta_mgr_java.zip
 zip -r meta_mgr_java.zip src pom.xml
-# 本队参数
+# 本地参数
 -server -Xms4096m -Xmx4096m -XX:MaxDirectMemorySize=256m -XX:NewRatio=1 -XX:+UseConcMarkSweepGC -XX:+UseParNewGC -XX:-UseBiasedLocking
 ```
 
