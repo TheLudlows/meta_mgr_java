@@ -14,8 +14,9 @@ public class Util {
         return Math.abs(Long.hashCode(key)) % BUCKET_SIZE;
     }
 
+    public static final Runtime run = Runtime.getRuntime();
+
     public static String mem() {
-        Runtime run = Runtime.getRuntime();
         long max = run.maxMemory() / 1024 / 1024;
         long total = run.totalMemory() / 1024 / 1024;
         long free = run.freeMemory() / 1024 / 1024;

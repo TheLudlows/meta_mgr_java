@@ -157,20 +157,29 @@ class WALBucket {
         int fileCount = (int) (keyPosition / 16);
         this.count = walCount + fileCount;
         // 恢复文件数据的索引
-        ByteBuffer buf = ByteBuffer.allocate((int) keyPosition);
-        keyChannel.read(buf, 0);
-        buf.flip();
+        ByteBuffer keyBuf = ByteBuffer.allocate((int) keyPosition);
+        // field数据
+        ByteBuffer dataBuf = ByteBuffer.allocate((int) dataPosition);
+        keyChannel.read(keyBuf, 0);
+        fileChannel.read(dataBuf, 0);
+        keyBuf.flip();
+        dataBuf.flip();
         int off = 0;
-        while (buf.hasRemaining()) {
-            long k = buf.getLong();
-            long v = buf.getLong();
+        while (keyBuf.hasRemaining()) {
+            long k = keyBuf.getLong();
+            long v = keyBuf.getLong();
             Versions versions = index.get(k);
 
             if (versions == null) {
                 versions = new Versions(DEFAULT_SIZE);
                 index.put(k, versions);
             }
+            long[] field = new long[64];
+            for (int i = 0; i < 64; i++) {
+                field[i] = dataBuf.getLong();
+            }
             versions.add(v, off++);
+            versions.addField(field);
         }
         // wal中的索引
         int walOff = 0;
@@ -186,7 +195,13 @@ class WALBucket {
                     versions = new Versions(DEFAULT_SIZE);
                     index.put(k, versions);
                 }
+
+                long[] field = new long[64];
+                for (int j = 0; j < 64; j++) {
+                    field[j] = wal.getLong(i * 64 * 8 + j * 8);
+                }
                 versions.add(v, off++);
+                versions.addField(field);
             }
         }
 
@@ -218,6 +233,7 @@ class WALBucket {
             index.put(key, versions);
         }
         versions.add(v, count++);
+        versions.addField(item.getDelta());
     }
 
     public Data read(long k, long v) throws IOException {
@@ -231,6 +247,14 @@ class WALBucket {
         data.setKey(k);
         data.setVersion(v);
         long[] fields = data.getField();
+        //
+        long maxVersion = versions.maxVersion();
+        if (maxVersion <= v) {
+            System.arraycopy(versions.filed, 0, fields, 0, 64);
+            data.setField(fields);
+            return data;
+        }
+
         boolean find = false;
         for (int i = 0; i < size; i++) {
             long ver = versions.vs[i];

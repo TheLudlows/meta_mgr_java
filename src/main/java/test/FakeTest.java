@@ -13,7 +13,7 @@ import java.util.List;
  */
 public class FakeTest {
     static int thread_n = 30;
-    static int n = 100000;
+    static int n = 150000;
     static Thread[] ts = new Thread[thread_n];
 
     public static void main(String[] args) throws InterruptedException {
@@ -39,9 +39,9 @@ public class FakeTest {
 
     private static void read(DataStoreRace store, int ks, int ke) {
         for (int i = ks; i < ke; i++) {
-            Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/8);
+            Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/10);
             if (data != null) {
-                if (data.getField()[0] != i * 5) {
+                if (data.getField()[0] != i * 10) {
                     System.out.println(i);
                 }
             }
@@ -61,7 +61,7 @@ public class FakeTest {
         List list = new ArrayList<>();
         deltaPacket.setDeltaItem(list);
         for (int i = ks; i < ke; i++) {
-            for (int j = 0; j < 5; j++) {
+            for (int j = 0; j < 10; j++) {
                 deltaPacket.setDeltaCount(1L);
                 deltaPacket.setVersion(j);
                 DeltaPacket.DeltaItem item = new DeltaPacket.DeltaItem();
