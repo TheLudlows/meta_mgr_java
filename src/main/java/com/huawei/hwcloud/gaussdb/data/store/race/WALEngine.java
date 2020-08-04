@@ -13,6 +13,7 @@ import java.nio.channels.FileChannel;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.readCounter;
 import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.writeCounter;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Versions.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
 import static java.nio.file.StandardOpenOption.*;
 
@@ -101,7 +102,8 @@ public class WALEngine implements DBEngine {
 
 class WALBucket {
     public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data(64));
-    public static final ThreadLocal<ByteBuffer> LOCAL_READ_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
+    // 4kb
+    public static final ThreadLocal<ByteBuffer> LOCAL_READ_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8 * 8));
 
     protected String dir;
     // 一个分区总共写入量
@@ -248,11 +250,34 @@ class WALBucket {
         data.setVersion(v);
         long[] fields = data.getField();
         //
-        long maxVersion = versions.maxVersion();
-        if (maxVersion <= v) {
+        int func = versions.queryFunc(v);
+        if(k == 11) {
+            System.out.println(versions);
+        }
+        if (func == 0) {
+            return null;
+        } else if (func == 1) {
             System.arraycopy(versions.filed, 0, fields, 0, 64);
             data.setField(fields);
             return data;
+        } else {
+            int firstMeet = firstLarge(v, versions.vs, 0, size - 1);
+            int lastMeet = lastLarge(v, versions.vs, 0, size - 1);
+            if(versions.off[lastMeet]*64L*8 < dataPosition) { //all in file
+                if (versions.off[lastMeet] - versions.off[firstMeet] <= 8) {
+                    // meet
+                    addMeetVersion(firstMeet, lastMeet, fields, versions,v);
+                    return data;
+                }
+            }
+            /*int firstUnMeet = firstLess(v, versions.vs, 0, size - 1);
+            int lastUnMet = lastLess(v, versions.vs, 0, size - 1);
+            if(versions.off[lastMeet] < dataPosition) { // all in file
+                if (versions.off[lastUnMet] - versions.off[firstUnMeet] <= 8) {
+                    delUnMeetVersion(firstMeet, lastMeet, fields, versions);
+                    return data;
+                }
+            }*/
         }
 
         boolean find = false;
@@ -265,6 +290,26 @@ class WALBucket {
         }
         return find ? data : null;
     }
+
+    private void addMeetVersion(int firstMeet, int lastMeet, long[] fields, Versions versions, long v) throws IOException {
+        ByteBuffer readBuf = LOCAL_READ_BUF.get();
+        readBuf.position(0);
+        readBuf.limit(64*8*8);
+        long pos = versions.off[firstMeet]* 64* 8;
+        fileChannel.read(readBuf, pos);
+        for(int i = 0,from = firstMeet;from<=lastMeet;i++,from++) {
+            if(versions.vs[from] <= v) {
+                for (int j = 0; j < 64; j++) {
+                    fields[j] += readBuf.getLong(i*64*8 +j * 8);
+                }
+            }
+        }
+    }
+
+    private void addMeetVersion(int firstMeet, int lastMeet, long[] fields, Versions versions) {
+
+    }
+
 
     private void flush_wal() throws IOException {
         // flush to file
@@ -290,6 +335,7 @@ class WALBucket {
             // 在文件中
             ByteBuffer readBuf = LOCAL_READ_BUF.get();
             readBuf.position(0);
+            readBuf.limit(64*8);
             fileChannel.read(readBuf, pos);
             for (int i = 0; i < 64; i++) {
                 arr[i] += readBuf.getLong(i * 8);

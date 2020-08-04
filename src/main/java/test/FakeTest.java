@@ -12,8 +12,8 @@ import java.util.List;
  * 模拟本地测试
  */
 public class FakeTest {
-    static int thread_n = 30;
-    static int n = 150000;
+    static int thread_n = 2;
+    static int n = 15000;
     static Thread[] ts = new Thread[thread_n];
 
     public static void main(String[] args) throws InterruptedException {
@@ -39,9 +39,9 @@ public class FakeTest {
 
     private static void read(DataStoreRace store, int ks, int ke) {
         for (int i = ks; i < ke; i++) {
-            Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/10);
+            Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/4);
             if (data != null) {
-                if (data.getField()[0] != i * 10) {
+                if (data.getField()[0] != i * 5) {
                     System.out.println(i);
                 }
             }
