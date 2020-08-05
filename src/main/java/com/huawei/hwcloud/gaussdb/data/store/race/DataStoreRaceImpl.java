@@ -12,15 +12,16 @@ import static java.lang.System.exit;
 
 
 public class DataStoreRaceImpl implements DataStoreRace {
-    public static LongAdder writeCounter;
-    public static LongAdder readCounter;
+    public static LongAdder writeCounter = new LongAdder();
+    public static LongAdder readCounter = new LongAdder();
+    public static LongAdder randomRead = new LongAdder();
+    public static LongAdder mergeRead = new LongAdder();
+
     private DBEngine dbEngine;
 
     @Override
     public boolean init(String dir) {
         try {
-            writeCounter = new LongAdder();
-            readCounter = new LongAdder();
             LOG("Init dir:" + dir);
             dbEngine = new WALEngine(dir);
             dbEngine.init();
@@ -38,6 +39,8 @@ public class DataStoreRaceImpl implements DataStoreRace {
             LOG("all read:" + readCounter.sum());
             LOG(mem());
             LOG("all meet:" + allMeetTimes.sum());
+            LOG("random read:" + randomRead.sum());
+            LOG("merge read:" + mergeRead.sum());
             dbEngine.print();
             dbEngine.close();
         } catch (Throwable e) {

@@ -11,6 +11,8 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
+import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.mergeRead;
+import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.randomRead;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
 import static java.nio.file.StandardOpenOption.*;
@@ -194,8 +196,8 @@ public class WALBucket {
                 continue;
             }
             int s = i;
-            for (int j=i;j <= last; i++,j++) {
-                if(j+1 > last || off[j+1] - off[s] > 7) {
+            for (int j = i; j <= last; i++, j++) {
+                if (j + 1 > last || off[j + 1] - off[s] > 7) {
                     addMeetVersion(s, j, fields, versions, v);
                     break;
                 }
@@ -205,22 +207,19 @@ public class WALBucket {
     }
 
     private void addMeetVersion(int firstMeet, int lastMeet, long[] fields, Versions versions, long v) throws IOException {
+        mergeRead.add(1);
         ByteBuffer readBuf = LOCAL_READ_BUF.get();
         readBuf.position(0);
-        readBuf.limit(64 * 8 * 8);
+        readBuf.limit((versions.off[lastMeet] - versions.off[firstMeet] + 1) * 64 * 8);
         long pos = versions.off[firstMeet] * 64L * 8;
         fileChannel.read(readBuf, pos);
-        try {
-            for (int from = firstMeet; from <= lastMeet; from++) {
-                int base = (versions.off[from] - versions.off[firstMeet]) * 64 * 8;
-                if (versions.vs[from] <= v) {
-                    for (int j = 0; j < 64; j++) {
-                        fields[j] += readBuf.getLong(base + j * 8);
-                    }
+        for (int from = firstMeet; from <= lastMeet; from++) {
+            int base = (versions.off[from] - versions.off[firstMeet]) * 64 * 8;
+            if (versions.vs[from] <= v) {
+                for (int j = 0; j < 64; j++) {
+                    fields[j] += readBuf.getLong(base + j * 8);
                 }
             }
-        }catch (Exception e) {
-            System.out.println(firstMeet +" " + lastMeet);
         }
     }
 
@@ -245,6 +244,7 @@ public class WALBucket {
                 arr[i] += wal.getLong(walPos + i * 8);
             }
         } else {
+            randomRead.add(1);
             // 在文件中
             ByteBuffer readBuf = LOCAL_READ_BUF.get();
             readBuf.position(0);
