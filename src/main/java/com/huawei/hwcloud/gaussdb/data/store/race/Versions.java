@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
- * s List<version-off>
+ * as List<version-off>
  */
 public class Versions {
     protected long[] vs;
