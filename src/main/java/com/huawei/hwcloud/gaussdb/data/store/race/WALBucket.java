@@ -11,8 +11,8 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
-import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.mergeRead;
-import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.randomRead;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.mergeRead;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.randomRead;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
 import static java.nio.file.StandardOpenOption.*;
@@ -162,14 +162,16 @@ public class WALBucket {
         data.setVersion(v);
         long[] fields = data.getField();
         int func = versions.queryFunc(v);
-        if (func == 0) {
+        if (func == 0) {// no match
             return null;
-        } else if (func == 1) {
+        } else if (func == -1) { // all in mem
             System.arraycopy(versions.filed, 0, fields, 0, 64);
             data.setField(fields);
             return data;
-        } else if (mergeRead(fields, versions, v)) {
-            return data;
+        } else if(func == 2) { // all or some in disk
+            if (mergeRead(fields, versions, v)) {
+                return data;
+            }
         }
 
         boolean find = false;
@@ -197,7 +199,7 @@ public class WALBucket {
             }
             int s = i;
             for (int j = i; j <= last; i++, j++) {
-                if (j + 1 > last || off[j + 1] - off[s] > 7) {
+                if (j + 1 > last || off[j + 1] - off[s] > 7) {// 4kb page?
                     addMeetVersion(s, j, fields, versions, v);
                     break;
                 }
@@ -206,15 +208,15 @@ public class WALBucket {
         return true;
     }
 
-    private void addMeetVersion(int firstMeet, int lastMeet, long[] fields, Versions versions, long v) throws IOException {
+    private void addMeetVersion(int first, int last, long[] fields, Versions versions, long v) throws IOException {
         mergeRead.add(1);
         ByteBuffer readBuf = LOCAL_READ_BUF.get();
         readBuf.position(0);
-        readBuf.limit((versions.off[lastMeet] - versions.off[firstMeet] + 1) * 64 * 8);
-        long pos = versions.off[firstMeet] * 64L * 8;
+        readBuf.limit((versions.off[last] - versions.off[first] + 1) * 64 * 8);
+        long pos = versions.off[first] * 64L * 8;
         fileChannel.read(readBuf, pos);
-        for (int from = firstMeet; from <= lastMeet; from++) {
-            int base = (versions.off[from] - versions.off[firstMeet]) * 64 * 8;
+        for (int from = first; from <= last; from++) {
+            int base = (versions.off[from] - versions.off[first]) * 64 * 8;
             if (versions.vs[from] <= v) {
                 for (int j = 0; j < 64; j++) {
                     fields[j] += readBuf.getLong(base + j * 8);

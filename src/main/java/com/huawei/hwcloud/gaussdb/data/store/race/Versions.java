@@ -3,12 +3,15 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 import java.util.Arrays;
 import java.util.concurrent.atomic.LongAdder;
 
+/**
+ * s List<version-off>
+ */
 public class Versions {
     protected long[] vs;
     protected int[] off;
     protected int size;
     protected long[] filed;
-    public static final LongAdder allMeetTimes = new LongAdder();
+    public static final LongAdder allmatchTimes = new LongAdder();
 
     public void add(long v, int index) {
         int maxSize = vs.length;
@@ -63,29 +66,31 @@ public class Versions {
     }
 
     public int queryFunc(long version) {
-        int meet = 0;
-        int unMeet = 0;
+        int match = 0;
+        int unmatch = 0;
         int len = this.size;
         for (int i = 0; i < size; i++) {
             if (version >= vs[i]) {
-                meet++;
+                match++;
             } else {
-                unMeet++;
+                unmatch++;
             }
         }
 
-        if (meet == len) {
-            allMeetTimes.add(1);
-            if(filed == null) {
+        if (match == len) {
+            allmatchTimes.add(1);
+            if(filed == null) {// not in mem
                 return 2;
             }
-            // all
-            return 1;
-        } else if (unMeet == len) {
+            // all in mem
+            return -1;
+        } else if (unmatch == len) {
             // no one
             return 0;
+        } else if (match == 1) {
+           return 1;// 低吞吐
         } else {
-           return 2;
+            return 2;
         }
     }
 

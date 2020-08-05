@@ -6,17 +6,13 @@ import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 import java.util.List;
 import java.util.concurrent.atomic.LongAdder;
 
+import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Versions.allMeetTimes;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
 import static java.lang.System.exit;
 
 
 public class DataStoreRaceImpl implements DataStoreRace {
-    public static LongAdder writeCounter = new LongAdder();
-    public static LongAdder readCounter = new LongAdder();
-    public static LongAdder randomRead = new LongAdder();
-    public static LongAdder mergeRead = new LongAdder();
-
     private DBEngine dbEngine;
 
     @Override
@@ -70,9 +66,6 @@ public class DataStoreRaceImpl implements DataStoreRace {
         try {
             readCounter.add(1);
             Data data = dbEngine.read(key, version);
-            if (data == null) {
-                LOG("empty data key" + key + " v " + version);
-            }
             return data;
         } catch (Throwable e) {
             LOG_ERR("readDataByVersion ", e);

@@ -8,8 +8,8 @@ import java.io.IOException;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.BUCKET_SIZE;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.MONITOR_TIME;
-import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.readCounter;
-import static com.huawei.hwcloud.gaussdb.data.store.race.DataStoreRaceImpl.writeCounter;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.readCounter;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.writeCounter;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
 
 /**

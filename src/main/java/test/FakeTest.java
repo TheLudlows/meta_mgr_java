@@ -13,7 +13,7 @@ import java.util.List;
  */
 public class FakeTest {
     static int thread_n = 30;
-    static int n = 15000;
+    static int n = 150000;
     static Thread[] ts = new Thread[thread_n];
 
     public static void main(String[] args) throws InterruptedException {
@@ -39,9 +39,9 @@ public class FakeTest {
 
     private static void read(DataStoreRace store, int ks, int ke) {
         for (int i = ks; i < ke; i++) {
-            Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/3);
+            Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/0);
             if (data != null) {
-                if (data.getField()[0] != i * 8) {
+                if (data.getField()[0] != i * 1) {
                     System.out.println(data);
                     System.out.println();
                     System.exit(1);
