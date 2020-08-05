@@ -22,6 +22,15 @@ public class DeltaPacket implements Serializable {
 
     private List<DeltaItem> deltaItem;
 
+    @Override
+    public String toString() {
+        return "DeltaPacket{" +
+                "version=" + version +
+                ", deltaCount=" + deltaCount +
+                ", deltaItem=" + deltaItem +
+                '}';
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -39,14 +48,5 @@ public class DeltaPacket implements Serializable {
             return "DeltaItem{" +
                     "key=" + key + '}';
         }
-    }
-
-    @Override
-    public String toString() {
-        return "DeltaPacket{" +
-                "version=" + version +
-                ", deltaCount=" + deltaCount +
-                ", deltaItem=" + deltaItem +
-                '}';
     }
 }

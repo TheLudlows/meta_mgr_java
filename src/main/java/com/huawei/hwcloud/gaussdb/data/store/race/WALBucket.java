@@ -168,7 +168,7 @@ public class WALBucket {
             System.arraycopy(versions.filed, 0, fields, 0, 64);
             data.setField(fields);
             return data;
-        } else if(func == 2) { // all or some in disk
+        } else if (func == 2) { // all or some in disk
             if (mergeRead(fields, versions, v)) {
                 return data;
             }
@@ -199,7 +199,7 @@ public class WALBucket {
             }
             int s = i;
             for (int j = i; j <= last; i++, j++) {
-                if (j + 1 > last || off[j + 1] - off[s] > 7) {// 4kb page?
+                if (j + 1 > last || off[j + 1] - off[s] > 5) {// 4kb page?
                     addMeetVersion(s, j, fields, versions, v);
                     break;
                 }

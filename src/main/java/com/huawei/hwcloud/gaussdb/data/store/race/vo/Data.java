@@ -2,7 +2,6 @@ package com.huawei.hwcloud.gaussdb.data.store.race.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -26,7 +25,7 @@ public class Data implements Serializable {
     }
 
     public void reset() {
-        for (int i=0;i<64;i++) {
+        for (int i = 0; i < 64; i++) {
             field[i] = 0;
         }
     }
