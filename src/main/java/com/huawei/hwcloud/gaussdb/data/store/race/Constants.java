@@ -6,7 +6,7 @@ public interface Constants {
      */
     int WAL_SIZE = 1024 * 128;
     /**
-     * wal count 4kb
+     * wal count 4096
      */
     int WAL_COUNT = WAL_SIZE / 64 / 8;
 

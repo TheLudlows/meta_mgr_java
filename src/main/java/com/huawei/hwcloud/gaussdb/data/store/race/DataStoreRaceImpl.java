@@ -6,6 +6,7 @@ import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 import java.util.List;
 import java.util.concurrent.atomic.LongAdder;
 
+import static com.huawei.hwcloud.gaussdb.data.store.race.Versions.allMeetTimes;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
 import static java.lang.System.exit;
 
@@ -35,6 +36,8 @@ public class DataStoreRaceImpl implements DataStoreRace {
         try {
             LOG("all write:" + writeCounter.sum());
             LOG("all read:" + readCounter.sum());
+            LOG(mem());
+            LOG("all meet:" + allMeetTimes.sum());
             dbEngine.print();
             dbEngine.close();
         } catch (Throwable e) {
@@ -70,6 +73,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
             return data;
         } catch (Throwable e) {
             LOG_ERR("readDataByVersion ", e);
+            exit(1);
         }
         return null;
     }

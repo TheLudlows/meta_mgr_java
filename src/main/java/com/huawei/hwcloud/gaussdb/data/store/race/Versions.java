@@ -1,18 +1,20 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.LongAdder;
 
 public class Versions {
     protected long[] vs;
     protected int[] off;
     protected int size;
     protected long[] filed;
+    public static final LongAdder allMeetTimes = new LongAdder();
 
     public void add(long v, int index) {
         int maxSize = vs.length;
         if (size == maxSize) {
             //resize
-            maxSize *= 2;
+            maxSize += 2;
             long[] tempVS = new long[maxSize];
             System.arraycopy(vs, 0, tempVS, 0, size);
 
@@ -71,7 +73,12 @@ public class Versions {
                 unMeet++;
             }
         }
+
         if (meet == len) {
+            allMeetTimes.add(1);
+            if(filed == null) {
+                return 2;
+            }
             // all
             return 1;
         } else if (unMeet == len) {
@@ -93,21 +100,21 @@ public class Versions {
         long[] arr = new long[]{1, 2, 3, 30, 15, 25};
         int fix = 10;
         System.out.println(firstLarge(fix, arr, 0, arr.length - 1));
-        System.out.println(lastLarge(fix, arr, 0, arr.length - 1));
         System.out.println(firstLess(fix, arr, 0, arr.length - 1));
         System.out.println(lastLess(fix, arr, 0, arr.length - 1));
-
     }
 
-    public static int lastLarge(long l, long[] arr, int from, int to) {
-        while (from <= to) {
-            if (arr[to] <= l) {
+    public int lastLarge(long l) {
+        int to = this.size-1;
+        while (0 <= to) {
+            if (vs[to] <= l) {
                 return to;
             }
             to--;
         }
         return 0;
     }
+
 
     public static int lastLess(long l, long[] arr, int from, int to) {
         while (from <= to) {
