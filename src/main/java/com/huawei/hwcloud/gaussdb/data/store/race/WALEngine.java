@@ -51,9 +51,9 @@ public class WALEngine implements DBEngine {
                     long mr = mergeRead.sum();
                     long rr = randomRead.sum();
                     long rs = totalReadSize.sum();
-                    LOG("[LAST" + MONITOR_TIME + "ms], [Read " + (read - lastRead) + "],[Write " + (write - lastWrite)
+                    LOG("[LAST" + MONITOR_TIME + "ms],[Read " + (read - lastRead) + "],[Write " + (write - lastWrite)
                             + "],[MergeRead " + (mr - lastMergeRead) + "],[RandomRead " + (rr - lastRandomRead) + "],[ReadSize "
-                            + ((rs - lastReadSize) / 1024 / 1024) + "M]"
+                            + ((rs - lastReadSize) / 1024 / 1024) + "M]" + ",[CPU " + cpuLoad() + "]"
                     );
 
                     LOG(mem());

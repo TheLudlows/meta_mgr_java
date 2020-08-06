@@ -8,3 +8,5 @@
 -XX:-UseBiasedLocking
 -XX:+PrintGC
 -Xloggc:path
+-XX:+UseCompressedOops
+-XX:+UseFastAccessorMethods
