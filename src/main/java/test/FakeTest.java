@@ -41,7 +41,7 @@ public class FakeTest {
         for (int i = ks; i < ke; i++) {
             Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/7);
             if (data != null) {
-                if (data.getField()[0] != i * 16) {
+                if (data.getField()[0] != i * 24) {
                     System.out.println(data);
                     System.out.println();
                     System.exit(1);

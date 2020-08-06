@@ -8,8 +8,7 @@ import java.io.IOException;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.BUCKET_SIZE;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.MONITOR_TIME;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.readCounter;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.writeCounter;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
 
 /**
@@ -49,10 +48,20 @@ public class WALEngine implements DBEngine {
                 while (!stop) {
                     long read = readCounter.sum();
                     long write = writeCounter.sum();
-                    LOG("Last" + MONITOR_TIME + "ms,read:" + (read - lastRead) + ",write:" + (write - lastWrite));
+                    long mr = mergeRead.sum();
+                    long rr = randomRead.sum();
+                    long rs = totalReadSize.sum();
+                    LOG("[LAST" + MONITOR_TIME + "ms], [Read " + (read - lastRead) + "],[Write " + (write - lastWrite)
+                            + "],[MergeRead " + (mr - lastMergeRead) + "],[RandomRead " + (rr - lastRandomRead) + "],[ReadSize "
+                            + ((rs - lastReadSize) / 1024 / 1024) + "M]"
+                    );
+
                     LOG(mem());
                     lastRead = read;
                     lastWrite = write;
+                    lastMergeRead = mr;
+                    lastRandomRead = rr;
+                    lastReadSize = rs;
                     Thread.sleep(MONITOR_TIME);
                 }
             } catch (InterruptedException e) {
