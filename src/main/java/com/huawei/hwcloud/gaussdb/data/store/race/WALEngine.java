@@ -41,17 +41,12 @@ public class WALEngine implements DBEngine {
         backPrint = new Thread(() ->
         {
             try {
-                StringBuffer buffer = new StringBuffer();
                 long lastWrite = 0;
                 long lastRead = 0;
+                long lastMergeRead = 0;
+                long lastRandomRead = 0;
+                long lastReadSize = 0;
                 while (!stop) {
-                    // buckets info
-                   /* buffer.setLength(0);
-                    for (WALBucket bucket : buckets) {
-                        buffer.append(bucket.dir + " " + bucket.count + " " + bucket.index.size() + "|");
-                    }
-                    LOG(buffer.toString());*/
-                    // request
                     long read = readCounter.sum();
                     long write = writeCounter.sum();
                     LOG("Last" + MONITOR_TIME + "ms,read:" + (read - lastRead) + ",write:" + (write - lastWrite));

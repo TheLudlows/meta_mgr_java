@@ -1,0 +1,10 @@
+-server
+-Xms4096m
+-Xmx4096m
+-XX:MaxDirectMemorySize=256m
+-XX:NewRatio=2
+-XX:+UseConcMarkSweepGC
+-XX:+UseParNewGC
+-XX:-UseBiasedLocking
+-XX:+PrintGC
+-Xloggc:path
