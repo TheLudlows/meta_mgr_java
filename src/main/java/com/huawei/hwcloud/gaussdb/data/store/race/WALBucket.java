@@ -158,28 +158,26 @@ public class WALBucket {
         data.setKey(k);
         data.setVersion(v);
         long[] fields = data.getField();
-        int func = versions.queryFunc(v);
-        if (func == 0) {// no match
+        int match = versions.queryFunc(v);
+        if (match == 0) {// no match
             return null;
-        } else if (func == -1) { // all in mem
+        } else if (match == -1) { // all in mem
             System.arraycopy(versions.filed, 0, fields, 0, 64);
             data.setField(fields);
             return data;
-        } else if (func == 2) { // all or some in disk
+        } else if (match > 1) { // all or some in disk
             if (mergeRead(fields, versions, v)) {
                 return data;
             }
         }
 
-        boolean find = false;
         for (int i = 0; i < size; i++) {
             long ver = versions.vs[i];
             if (ver <= v) {
-                find = true;
                 addFiled(versions.off[i], fields);
             }
         }
-        return find ? data : null;
+        return data;
     }
 
     private boolean mergeRead(long[] fields, Versions versions, long v) throws IOException {

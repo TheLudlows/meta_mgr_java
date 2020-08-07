@@ -26,42 +26,6 @@ public class Versions {
         v.add(1, 3);
         v.add(1, 4);
         System.out.println(v);
-
-        long[] arr = new long[]{1, 2, 3, 30, 15, 25};
-        int fix = 10;
-        System.out.println(firstLarge(fix, arr, 0, arr.length - 1));
-        System.out.println(firstLess(fix, arr, 0, arr.length - 1));
-        System.out.println(lastLess(fix, arr, 0, arr.length - 1));
-    }
-
-    public static int lastLess(long l, long[] arr, int from, int to) {
-        while (from <= to) {
-            if (arr[to] > l) {
-                return to;
-            }
-            to--;
-        }
-        return 0;
-    }
-
-    public static int firstLess(long l, long[] arr, int from, int to) {
-        while (from <= to) {
-            if (arr[from] > l) {
-                return from;
-            }
-            from++;
-        }
-        return 0;
-    }
-
-    public static int firstLarge(long l, long[] arr, int from, int to) {
-        while (from <= to) {
-            if (arr[from] <= l) {
-                return from;
-            }
-            from++;
-        }
-        return 0;
     }
 
     public void add(long v, int index) {
@@ -112,30 +76,21 @@ public class Versions {
 
     public int queryFunc(long version) {
         int match = 0;
-        int unmatch = 0;
-        int len = this.size;
         for (int i = 0; i < size; i++) {
             if (version >= vs[i]) {
                 match++;
-            } else {
-                unmatch++;
             }
         }
 
-        if (match == len) {
+        if (match == size) {
             allMatchTimes.add(1);
             if (filed == null) {// not in mem
-                return 2;
+                return match;
             }
             // all in mem
             return -1;
-        } else if (unmatch == len) {
-            // no one
-            return 0;
-        } else if (match == 1) {
-            return 1;// 低吞吐
         } else {
-            return 2;
+            return match;
         }
     }
 

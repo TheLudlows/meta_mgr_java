@@ -18,7 +18,6 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
 public class WALEngine implements DBEngine {
     private String dir;
     private WALBucket buckets[];
-    private volatile boolean stop = false;
     // 数据监控线程
     private Thread backPrint;
 
@@ -45,7 +44,7 @@ public class WALEngine implements DBEngine {
                 long lastMergeRead = 0;
                 long lastRandomRead = 0;
                 long lastReadSize = 0;
-                while (!stop) {
+                while (true) {
                     long read = readCounter.sum();
                     long write = writeCounter.sum();
                     long mr = mergeRead.sum();
@@ -68,6 +67,7 @@ public class WALEngine implements DBEngine {
                 LOG_ERR("err", e);
             }
         });
+        backPrint.setDaemon(true);
         backPrint.start();
     }
 
@@ -90,11 +90,5 @@ public class WALEngine implements DBEngine {
 
     @Override
     public void close() {
-        this.stop = true;
-        try {
-            backPrint.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 }

@@ -17,7 +17,8 @@ public class Util {
     public static final int index(long key) {
         return Math.abs(Long.hashCode(key)) % BUCKET_SIZE;
     }
-    private static final OperatingSystemMXBean osmxb = (OperatingSystemMXBean)ManagementFactory.getOperatingSystemMXBean();
+
+    private static final OperatingSystemMXBean osmxb = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
 
     public static String mem() {
         long max = run.maxMemory() / 1024 / 1024;
@@ -28,12 +29,15 @@ public class Util {
     }
 
     public static final void LOG(String s) {
-        if (LOG_COUNT.decrementAndGet() > 0)
+        if (LOG_COUNT.get() > 0) {
+            LOG_COUNT.decrementAndGet();
             System.out.println(LOG_PREFIX + s);
+        }
     }
 
     public static final void LOG_ERR(String s, Throwable e) {
-        if (LOG_COUNT.decrementAndGet() > 0) {
+        if (LOG_COUNT.get() > 0) {
+            LOG_COUNT.decrementAndGet();
             System.out.print(LOG_PREFIX + s);
             e.printStackTrace();
         }
@@ -46,7 +50,7 @@ public class Util {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        for(int i=0;i<10;i++) {
+        for (int i = 0; i < 10; i++) {
             Thread.sleep(100);
             System.out.println(cpuLoad());
         }
