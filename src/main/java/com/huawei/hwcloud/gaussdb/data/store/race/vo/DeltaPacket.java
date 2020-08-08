@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 
 @Data
 @NoArgsConstructor
@@ -48,5 +49,26 @@ public class DeltaPacket implements Serializable {
             return "DeltaItem{" +
                     "key=" + key + '}';
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            DeltaItem deltaItem = (DeltaItem) o;
+            return key == deltaItem.key;
+        }
+
+        @Override
+        public int hashCode() {
+            return Long.hashCode(key);
+        }
+
+        public void add(long[] f) {
+            for(int i=0;i<64;i++) {
+                this.delta[i] += f[i];
+            }
+        }
     }
+
+
 }

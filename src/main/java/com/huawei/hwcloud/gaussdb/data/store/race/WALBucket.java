@@ -162,7 +162,7 @@ public class WALBucket {
         if (match == 0) {// no match
             return null;
         } else if (match == -1) { // all in mem
-            System.arraycopy(versions.filed, 0, fields, 0, 64);
+            //System.arraycopy(versions.filed, 0, fields, 0, 64);
             data.setField(fields);
             return data;
         } else if (match > 1) { // all or some in disk
@@ -194,7 +194,7 @@ public class WALBucket {
             }
             int s = i;
             for (int j = i; j <= last; i++, j++) {
-                if (j + 1 > last || off[j + 1] - off[s] > 5) {// 4kb page?
+                if (j + 1 > last || off[j + 1] - off[s] > 7) {// 4kb page?
                     addMeetVersion(s, j, fields, versions, v);
                     break;
                 }

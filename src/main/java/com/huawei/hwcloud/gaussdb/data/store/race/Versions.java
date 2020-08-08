@@ -11,7 +11,7 @@ public class Versions {
     protected long[] vs;
     protected int[] off;
     protected int size;
-    protected long[] filed;
+    //protected long[] filed;
 
     public Versions(int maxSize) {
         this.size = 0;
@@ -55,14 +55,14 @@ public class Versions {
                 '}';
     }
 
-    public void addField(long[] l) {
+    /*public void addField(long[] l) {
         if (filed == null) {
             filed = new long[64];
         }
         for (int i = 0; i < 64; i++) {
             filed[i] += l[i];
         }
-    }
+    }*/
 
     public long maxVersion() {
         long max = 0;
@@ -81,17 +81,17 @@ public class Versions {
                 match++;
             }
         }
-
-        if (match == size) {
-            allMatchTimes.add(1);
-            if (filed == null) {// not in mem
+        return match;
+        /*if (match == size) {
+            allMatchTims.add(1);
+            *//*if (filed == null) {// not in mem
                 return match;
-            }
+            }*//*
             // all in mem
-            return -1;
+            //return -1;
         } else {
             return match;
-        }
+        }*/
     }
 
     public int lastLarge(long l) {

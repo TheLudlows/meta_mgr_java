@@ -3,7 +3,9 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
@@ -49,10 +51,21 @@ public class DataStoreRaceImpl implements DataStoreRace {
             long count = deltaPacket.getDeltaCount();
             long v = deltaPacket.getVersion();
             List<DeltaPacket.DeltaItem> list = deltaPacket.getDeltaItem();
+            Map<Long, DeltaPacket.DeltaItem> map = new HashMap<>();
             for (int i = 0; i < count; i++) {
+                long k = list.get(i).getKey();
                 DeltaPacket.DeltaItem item = list.get(i);
+                DeltaPacket.DeltaItem inMapItem;
+                if ((inMapItem = map.get(k)) == null) {
+                    map.put(k, item);
+                } else {
+                    inMapItem.add(item.getDelta());
+                }
+            }
+            for (DeltaPacket.DeltaItem item : map.values()) {
                 dbEngine.write(v, item);
             }
+
         } catch (Throwable e) {
             LOG_ERR("writeDeltaPacket ", e);
             exit(1);
