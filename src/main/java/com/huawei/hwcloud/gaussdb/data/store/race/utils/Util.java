@@ -11,7 +11,7 @@ public class Util {
 
     public static final String LOG_PREFIX = "[LIBMETA_MGR] ";
 
-    public static final AtomicInteger LOG_COUNT = new AtomicInteger(5000);
+    public static final AtomicInteger LOG_COUNT = new AtomicInteger(3000);
     public static final Runtime run = Runtime.getRuntime();
 
     public static final int index(long key) {

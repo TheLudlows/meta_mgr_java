@@ -96,6 +96,7 @@ public class WALBucket {
                 field[i] = dataBuf.getLong();
             }
             versions.add(v, off++);
+            //versions.addField(k,field);
         }
         // wal中的索引
         int walOff = 0;
@@ -117,6 +118,7 @@ public class WALBucket {
                     field[j] = wal.getLong(i * 64 * 8 + j * 8);
                 }
                 versions.add(v, off++);
+                //versions.addField(k,field);
             }
         }
     }
@@ -145,7 +147,9 @@ public class WALBucket {
             index.put(key, versions);
         }
         versions.add(v, count++);
+        //versions.addField(key,item.getDelta());
     }
+
 
     public Data read(long k, long v) throws IOException {
         Versions versions = index.get(k);
@@ -158,7 +162,7 @@ public class WALBucket {
         data.setKey(k);
         data.setVersion(v);
         long[] fields = data.getField();
-        int match = versions.queryFunc(v);
+        /*int match = versions.queryFunc(v);
         if (match == 0) {// no match
             return null;
         } else if (match == -1) { // all in mem
@@ -169,7 +173,7 @@ public class WALBucket {
             if (mergeRead(fields, versions, v)) {
                 return data;
             }
-        }
+        }*/
 
         for (int i = 0; i < size; i++) {
             long ver = versions.vs[i];
@@ -194,7 +198,7 @@ public class WALBucket {
             }
             int s = i;
             for (int j = i; j <= last; i++, j++) {
-                if (j + 1 > last || off[j + 1] - off[s] > 7) {// 4kb page?
+                if (j + 1 > last || off[j + 1] - off[s] > 5) {// 4kb page?
                     addMeetVersion(s, j, fields, versions, v);
                     break;
                 }

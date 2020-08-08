@@ -35,7 +35,6 @@ public class Data implements Serializable {
         return "Data{" +
                 "key=" + key +
                 ", version=" + version +
-                ", field=" + Arrays.toString(field) +
                 '}';
     }
 }

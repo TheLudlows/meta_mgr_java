@@ -1,6 +1,6 @@
 -server
--Xms4096m
--Xmx4096m
+-Xms4800m
+-Xmx4800m
 -XX:MaxDirectMemorySize=256m
 -XX:NewRatio=2
 -XX:+UseConcMarkSweepGC

@@ -55,7 +55,10 @@ public class Versions {
                 '}';
     }
 
-    /*public void addField(long[] l) {
+/*    public void addField(long key,long[] l) {
+        if(Long.hashCode(key)%2 == 0) {
+            return;
+        }
         if (filed == null) {
             filed = new long[64];
         }
