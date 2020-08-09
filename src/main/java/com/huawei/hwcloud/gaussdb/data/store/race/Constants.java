@@ -13,4 +13,6 @@ public interface Constants {
      */
     int DEFAULT_SIZE = 2;
 
+    int MAPPED_FIELD_SIZE = 100000 * 64*8 * 8;
+
 }

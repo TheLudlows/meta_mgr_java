@@ -7,10 +7,10 @@ import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
-import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.BUCKET_SIZE;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.DEFAULT_SIZE;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
@@ -33,6 +33,7 @@ public class WALBucket {
     private long keyPosition;
     private FileChannel fileChannel;
     private FileChannel keyChannel;
+    private MappedByteBuffer dataBuf;
 
     public WALBucket(String dir,int id) {
         try {
@@ -44,6 +45,8 @@ public class WALBucket {
             String keyFileName = dir + ".key";
             this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
             this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
+            this.dataBuf = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, MAPPED_FIELD_SIZE);
+
             dataPosition = fileChannel.size();
             keyPosition = keyChannel.size();
 
