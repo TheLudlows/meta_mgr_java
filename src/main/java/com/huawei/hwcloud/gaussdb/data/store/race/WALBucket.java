@@ -81,7 +81,7 @@ public class WALBucket {
             for (int i = 0; i < 64; i++) {
                 field[i] = dataBuf.getLong(off + i * 8);
             }
-            if(id < BUCKET_SIZE/2) {
+            if(id < BUCKET_SIZE/3) {
                 versions.addField(field);
             }
         }
@@ -107,7 +107,7 @@ public class WALBucket {
             writeData(writeBuf, item.getDelta(), pos);
             versions.add(v, pos);
         }
-        if(id < BUCKET_SIZE/2) {
+        if(id < BUCKET_SIZE/3) {
             versions.addField(item.getDelta());
         }
         keyPosition += 20;
