@@ -2,6 +2,8 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 
 import java.util.Arrays;
 
+import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.page_field_num;
+
 /**
  * as List<version-off>
  */
@@ -14,16 +16,7 @@ public class Versions {
     public Versions(int maxSize) {
         this.size = 0;
         vs = new long[maxSize];
-        off = new int[maxSize / 8 + 1];
-    }
-
-    public static void main(String[] args) {
-        Versions v = new Versions(3);
-        for (int i = 0; i < 20; i++) {
-            v.add(i, i);
-        }
-
-        System.out.println(v);
+        off = new int[maxSize / page_field_num + 1];
     }
 
     public void add(long v, int index) {
@@ -35,14 +28,14 @@ public class Versions {
             System.arraycopy(vs, 0, tempVS, 0, vs.length);
             vs = tempVS;
         }
-        if (size / 8 + 1 > off.length) {
+        if (size / page_field_num + 1 > off.length) {
             int[] newOff = new int[off.length + 1];
             System.arraycopy(off, 0, newOff, 0, off.length);
             off = newOff;
-            off[size / 8] = index;
+            off[size / page_field_num] = index;
         }
-        if (size % 8 == 0) {
-            off[size / 8] = index;
+        if (size % page_field_num == 0) {
+            off[size / page_field_num] = index;
         }
         vs[size++] = v;
 
@@ -102,7 +95,15 @@ public class Versions {
         return 0;
     }
 
+    public static void main(String[] args) {
+        Versions v = new Versions(3);
+        for (int i = 0; i < 20; i++) {
+            v.add(i, i);
+        }
+
+        System.out.println(v);
+    }
     public boolean needAlloc() {
-        return size % 8 == 0;
+        return size % page_field_num == 0;
     }
 }

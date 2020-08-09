@@ -9,8 +9,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.BUCKET_SIZE;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.DEFAULT_SIZE;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
@@ -47,8 +46,8 @@ public class WALBucket {
             dataPosition = fileChannel.size();
             keyPosition = keyChannel.size();
 
-            if (dataPosition % 4096 != 0) {
-                dataPosition = (dataPosition / 4096 + 1) * 4096;
+            if (dataPosition % page_size != 0) {
+                dataPosition = (dataPosition / page_size + 1) * page_size;
             }
 
             tryRecover();
@@ -99,10 +98,10 @@ public class WALBucket {
             writeKey(writeBuf, key, v, (int) dataPosition, keyPosition);
             writeData(writeBuf, item.getDelta(), dataPosition);
             versions.add(v, (int) dataPosition);
-            dataPosition += 64 * 8 * 8;
+            dataPosition += page_size;
         } else {
-            int base = versions.off[versions.size / 8];
-            int pos = base + (versions.size % 8) * 64 * 8;
+            int base = versions.off[versions.size / page_field_num];
+            int pos = base + (versions.size % page_field_num) * 64 * 8;
             writeKey(writeBuf, key, v, pos, keyPosition);
             writeData(writeBuf, item.getDelta(), pos);
             versions.add(v, pos);
@@ -151,8 +150,8 @@ public class WALBucket {
                 i++;
                 continue;
             } else {
-                addMeetVersion(i, Math.min(i | 7, last), fields, versions, v);
-                i = (i / 8 + 1) * 8;
+                addMeetVersion(i, Math.min((i / page_field_num + 1) * page_field_num -1, last), fields, versions, v);
+                i = (i / page_field_num + 1) * page_field_num;
             }
         }
         return true;
@@ -168,7 +167,7 @@ public class WALBucket {
         ByteBuffer readBuf = LOCAL_READ_BUF.get();
         readBuf.position(0);
         readBuf.limit(size);
-        long pos = (first % 8) * 64L * 8 + versions.off[first / 8];
+        long pos = (first % page_field_num) * 64L * 8 + versions.off[first / page_field_num];
         fileChannel.read(readBuf, pos);
         for (int from = first; from <= last; from++) {
             int base = (from - first) * 64 * 8;

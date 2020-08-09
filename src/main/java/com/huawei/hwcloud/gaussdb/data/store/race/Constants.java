@@ -13,4 +13,8 @@ public interface Constants {
      */
     int DEFAULT_SIZE = 2;
 
+    int page_size = 64 * 8 * 6;
+
+    int page_field_num = 6;
+
 }
