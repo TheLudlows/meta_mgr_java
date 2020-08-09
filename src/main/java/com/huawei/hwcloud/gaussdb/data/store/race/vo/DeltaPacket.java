@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.Objects;
 
 @Data
 @NoArgsConstructor
@@ -64,7 +63,7 @@ public class DeltaPacket implements Serializable {
         }
 
         public void add(long[] f) {
-            for(int i=0;i<64;i++) {
+            for (int i = 0; i < 64; i++) {
                 this.delta[i] += f[i];
             }
         }

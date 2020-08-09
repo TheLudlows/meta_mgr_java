@@ -1,5 +1,6 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
+import com.carrotsearch.hppc.LongObjectHashMap;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 
@@ -37,7 +38,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
             LOG("all meet:" + allMatchTimes.sum());
             LOG("random read:" + randomRead.sum());
             LOG("merge read:" + mergeRead.sum());
-            LOG("total read size:" + totalReadSize.sum()/1024/1024 + "M");
+            LOG("total read size:" + totalReadSize.sum() / 1024 / 1024 + "M");
 
             dbEngine.print();
             dbEngine.close();
@@ -53,7 +54,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
             long count = deltaPacket.getDeltaCount();
             long v = deltaPacket.getVersion();
             List<DeltaPacket.DeltaItem> list = deltaPacket.getDeltaItem();
-            Map<Long, DeltaPacket.DeltaItem> map = new HashMap<>();
+            Map<Long,DeltaPacket.DeltaItem> map = new HashMap();
             for (int i = 0; i < count; i++) {
                 long k = list.get(i).getKey();
                 DeltaPacket.DeltaItem item = list.get(i);

@@ -13,12 +13,11 @@ public class Util {
 
     public static final AtomicInteger LOG_COUNT = new AtomicInteger(3000);
     public static final Runtime run = Runtime.getRuntime();
+    private static final OperatingSystemMXBean osmxb = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
 
     public static final int index(long key) {
         return Math.abs(Long.hashCode(key)) % BUCKET_SIZE;
     }
-
-    private static final OperatingSystemMXBean osmxb = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
 
     public static String mem() {
         long max = run.maxMemory() / 1024 / 1024;

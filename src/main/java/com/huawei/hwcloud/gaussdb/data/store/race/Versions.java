@@ -2,8 +2,6 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 
 import java.util.Arrays;
 
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.allMatchTimes;
-
 /**
  * as List<version-off>
  */
@@ -11,20 +9,20 @@ public class Versions {
     protected long[] vs;
     protected int[] off;
     protected int size;
-    //protected long[] filed;
+    protected long[] filed;
 
     public Versions(int maxSize) {
         this.size = 0;
         vs = new long[maxSize];
-        off = new int[maxSize];
+        off = new int[maxSize / 8 + 1];
     }
 
     public static void main(String[] args) {
         Versions v = new Versions(3);
-        v.add(1, 1);
-        v.add(1, 2);
-        v.add(1, 3);
-        v.add(1, 4);
+        for (int i = 0; i < 20; i++) {
+            v.add(i, i);
+        }
+
         System.out.println(v);
     }
 
@@ -34,16 +32,20 @@ public class Versions {
             //resize
             maxSize += 2;
             long[] tempVS = new long[maxSize];
-            System.arraycopy(vs, 0, tempVS, 0, size);
-
-            int[] tempOff = new int[maxSize];
-            System.arraycopy(off, 0, tempOff, 0, size);
-
+            System.arraycopy(vs, 0, tempVS, 0, vs.length);
             vs = tempVS;
-            off = tempOff;
         }
-        vs[size] = v;
-        off[size++] = index;
+        if (size / 8 + 1 > off.length) {
+            int[] newOff = new int[off.length + 1];
+            System.arraycopy(off, 0, newOff, 0, off.length);
+            off = newOff;
+            off[size / 8] = index;
+        }
+        if (size % 8 == 0) {
+            off[size / 8] = index;
+        }
+        vs[size++] = v;
+
     }
 
     @Override
@@ -55,27 +57,15 @@ public class Versions {
                 '}';
     }
 
-/*    public void addField(long key,long[] l) {
-        if(Long.hashCode(key)%2 == 0) {
-            return;
-        }
+   public void addField(long[] l) {
         if (filed == null) {
             filed = new long[64];
         }
         for (int i = 0; i < 64; i++) {
             filed[i] += l[i];
         }
-    }*/
-
-    public long maxVersion() {
-        long max = 0;
-        for (int i = 0; i < size; i++) {
-            if (max < vs[i]) {
-                max = vs[i];
-            }
-        }
-        return max;
     }
+
 
     public int queryFunc(long version) {
         int match = 0;
@@ -84,7 +74,11 @@ public class Versions {
                 match++;
             }
         }
-        return match;
+        if(match == size && filed != null) {
+            return 0;
+        }else {
+            return 1;
+        }
         /*if (match == size) {
             allMatchTims.add(1);
             *//*if (filed == null) {// not in mem
@@ -106,5 +100,9 @@ public class Versions {
             to--;
         }
         return 0;
+    }
+
+    public boolean needAlloc() {
+        return size % 8 == 0;
     }
 }
