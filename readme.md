@@ -15,3 +15,4 @@ zip -r meta_mgr_java.zip src pom.xml jvm.options
 - thread cache
 - 1kb page
 - merge write 
+- 缓存命中率高的话，可以尝试顺序写
