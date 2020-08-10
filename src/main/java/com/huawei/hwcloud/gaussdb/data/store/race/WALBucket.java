@@ -22,13 +22,12 @@ public class WALBucket {
     public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
 
     protected String dir;
-
     // 索引
     protected LongObjectHashMap<Versions> index;
     protected int id;
 
     // 文件中的位置
-    private volatile long dataPosition;
+    private volatile int dataPosition;
     private long keyPosition;
     private FileChannel fileChannel;
     private FileChannel keyChannel;
@@ -43,23 +42,27 @@ public class WALBucket {
             String keyFileName = dir + ".key";
             this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
             this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
-            dataPosition = fileChannel.size();
+            dataPosition = (int) fileChannel.size();
             keyPosition = keyChannel.size();
 
             if (dataPosition % page_size != 0) {
                 dataPosition = (dataPosition / page_size + 1) * page_size;
             }
-
+            long start = System.currentTimeMillis();
             tryRecover();
+            LOG("Recover " + dir + " cost:" + (System.currentTimeMillis() - start));
         } catch (Throwable e) {
             LOG_ERR("init bucket error", e);
         }
     }
 
     private void tryRecover() throws IOException {
+        if(keyPosition == 0) {
+            return;
+        }
         // 恢复文件数据的索引
         ByteBuffer keyBuf = ByteBuffer.allocate((int) keyPosition);
-        ByteBuffer dataBuf = ByteBuffer.allocate((int) dataPosition);
+        ByteBuffer dataBuf = ByteBuffer.allocate(dataPosition);
 
         // field数据
         fileChannel.read(dataBuf, 0);
@@ -67,22 +70,26 @@ public class WALBucket {
         keyBuf.flip();
         while (keyBuf.hasRemaining()) {
             long k = keyBuf.getLong();
-            long v = keyBuf.getLong();
+            int v = keyBuf.getInt();
             int off = keyBuf.getInt();
-            Versions versions = index.get(k);
+            buildIndex(k, v, off, dataBuf);
+        }
+    }
 
-            if (versions == null) {
-                versions = new Versions(DEFAULT_SIZE);
-                index.put(k, versions);
-            }
-            versions.add(v, off);
-            long[] field = new long[64];
-            for (int i = 0; i < 64; i++) {
-                field[i] = dataBuf.getLong(off + i * 8);
-            }
-            if (id < BUCKET_SIZE / 3) {
-                versions.addField(field);
-            }
+    private void buildIndex(long k, int v, int off, ByteBuffer dataBuf) {
+        Versions versions = index.get(k);
+
+        if (versions == null) {
+            versions = new Versions(DEFAULT_SIZE);
+            index.put(k, versions);
+        }
+        versions.add(v, off);
+        long[] field = new long[64];
+        for (int i = 0; i < 64; i++) {
+            field[i] = dataBuf.getLong(off + i * 8);
+        }
+        if (id < BUCKET_SIZE / cache_per) {
+            versions.addField(field);
         }
     }
 
@@ -94,22 +101,22 @@ public class WALBucket {
             versions = new Versions(DEFAULT_SIZE);
             index.put(key, versions);
         }
+        int pos;
+        // 计算这个version写盘的位置
         if (versions.needAlloc()) {
-            writeKey(writeBuf, key, v, (int) dataPosition, keyPosition);
-            writeData(writeBuf, item.getDelta(), dataPosition);
-            versions.add(v, (int) dataPosition);
+            pos =  dataPosition;
             dataPosition += page_size;
         } else {
             int base = versions.off[versions.size / page_field_num];
-            int pos = base + (versions.size % page_field_num) * 64 * 8;
-            writeKey(writeBuf, key, v, pos, keyPosition);
-            writeData(writeBuf, item.getDelta(), pos);
-            versions.add(v, pos);
+            pos = base + (versions.size % page_field_num) * 64 * 8;
         }
-        if (id < BUCKET_SIZE / 3) {
+        writeData(writeBuf,item.getDelta(), pos);
+        versions.add((int) v, pos);
+        writeKey(writeBuf, key, v, pos);
+        // cache 1/3
+        if (id < BUCKET_SIZE / cache_per) {
             versions.addField(item.getDelta());
         }
-        keyPosition += 20;
     }
 
     /**
@@ -142,7 +149,7 @@ public class WALBucket {
     }
 
     private boolean mergeRead(long[] fields, Versions versions, long v) throws IOException {
-        long[] vs = versions.vs;
+        int[] vs = versions.vs;
         int last = versions.lastLarge(v);
 
         for (int i = 0; i <= last; ) {
@@ -197,20 +204,20 @@ public class WALBucket {
         LOG(dir + " dataPosition:" + dataPosition + " keyPosition:" + keyPosition + " index size:" + index.size());
     }
 
-    private void writeKey(ByteBuffer writeBuf, long key, long v, int off, long pos) throws IOException {
+    private void writeKey(ByteBuffer writeBuf, long key, long v, int off) throws IOException {
         writeBuf.position(0);
         writeBuf.putLong(key);
-        writeBuf.putLong(v);
+        writeBuf.putInt((int) v);
         writeBuf.putInt(off);
-        writeBuf.limit(20);
+        writeBuf.limit(16);
         writeBuf.flip();
-        keyChannel.write(writeBuf, pos);
+        keyChannel.write(writeBuf, keyPosition);
+        keyPosition += 16;
     }
 
     public void writeData(ByteBuffer writeBuf, long[] f, long off) throws IOException {
         writeBuf.position(0);
         writeBuf.limit(64 * 8);
-        // field wal
         for (long l : f) {
             writeBuf.putLong(l);
         }

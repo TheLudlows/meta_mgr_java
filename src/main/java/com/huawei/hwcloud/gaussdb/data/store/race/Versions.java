@@ -8,23 +8,23 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.page_field_nu
  * as List<version-off>
  */
 public class Versions {
-    protected long[] vs;
+    protected int[] vs;
     protected int[] off;
     protected int size;
     protected long[] filed;
 
     public Versions(int maxSize) {
         this.size = 0;
-        vs = new long[maxSize];
+        vs = new int[maxSize];
         off = new int[maxSize / page_field_num + 1];
     }
 
-    public void add(long v, int index) {
+    public void add(int v, int index) {
         int maxSize = vs.length;
         if (size == maxSize) {
             //resize
             maxSize += 2;
-            long[] tempVS = new long[maxSize];
+            int[] tempVS = new int[maxSize];
             System.arraycopy(vs, 0, tempVS, 0, vs.length);
             vs = tempVS;
         }
@@ -37,7 +37,7 @@ public class Versions {
         if (size % page_field_num == 0) {
             off[size / page_field_num] = index;
         }
-        vs[size++] = v;
+        vs[size++] = (int) v;
 
     }
 
