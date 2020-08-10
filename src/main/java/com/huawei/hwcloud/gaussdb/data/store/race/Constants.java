@@ -16,5 +16,8 @@ public interface Constants {
     int page_field_num = 4;
     int page_size = 64 * 8 * page_field_num;
 
-    int cache_per = 2;
+    /**
+     * 缓存比例
+     */
+    int cache_per = 3;
 }

@@ -27,7 +27,7 @@ public class WALBucket {
     protected int id;
 
     // 文件中的位置
-    private volatile int dataPosition;
+    private int dataPosition;
     private long keyPosition;
     private FileChannel fileChannel;
     private FileChannel keyChannel;
@@ -57,14 +57,21 @@ public class WALBucket {
     }
 
     private void tryRecover() throws IOException {
-        if(keyPosition == 0) {
+        if (keyPosition == 0) {
+            // 分配
+            ByteBuffer buf = LOCAL_WRITE_BUF.get();
+            for (int i = 0; i < 400*1024; i++) {
+                buf.position(0);
+                fileChannel.write(buf, dataPosition);
+                dataPosition += 64 * 8;
+            }
+            dataPosition = 0;
             return;
         }
         // 恢复文件数据的索引
         ByteBuffer keyBuf = ByteBuffer.allocate((int) keyPosition);
         ByteBuffer dataBuf = ByteBuffer.allocate(dataPosition);
 
-        // field数据
         fileChannel.read(dataBuf, 0);
         keyChannel.read(keyBuf, 0);
         keyBuf.flip();
@@ -88,6 +95,7 @@ public class WALBucket {
         for (int i = 0; i < 64; i++) {
             field[i] = dataBuf.getLong(off + i * 8);
         }
+        //cache
         if (id < BUCKET_SIZE / cache_per) {
             versions.addField(field);
         }
@@ -104,16 +112,15 @@ public class WALBucket {
         int pos;
         // 计算这个version写盘的位置
         if (versions.needAlloc()) {
-            pos =  dataPosition;
+            pos = dataPosition;
             dataPosition += page_size;
         } else {
             int base = versions.off[versions.size / page_field_num];
             pos = base + (versions.size % page_field_num) * 64 * 8;
         }
-        writeData(writeBuf,item.getDelta(), pos);
+        writeData(writeBuf, item.getDelta(), pos);
         versions.add((int) v, pos);
         writeKey(writeBuf, key, v, pos);
-        // cache 1/3
         if (id < BUCKET_SIZE / cache_per) {
             versions.addField(item.getDelta());
         }
@@ -140,7 +147,7 @@ public class WALBucket {
         data.setVersion(v);
         long[] fields = data.getField();
         // use cache
-        if (versions.queryFunc(v) == 0) {
+       if (versions.queryFunc(v) == 0) {
             System.arraycopy(versions.filed, 0, fields, 0, 64);
             return data;
         }
@@ -148,7 +155,7 @@ public class WALBucket {
         return data;
     }
 
-    private boolean mergeRead(long[] fields, Versions versions, long v) throws IOException {
+    private void mergeRead(long[] fields, Versions versions, long v) throws IOException {
         int[] vs = versions.vs;
         int last = versions.lastLarge(v);
 
@@ -161,7 +168,6 @@ public class WALBucket {
                 i = (i / page_field_num + 1) * page_field_num;
             }
         }
-        return true;
     }
 
     private void addMeetVersion(int first, int last, long[] fields, Versions versions, long v) throws IOException {
@@ -170,7 +176,6 @@ public class WALBucket {
             last--;
         }
         int size = (last - first + 1) * 64 * 8;
-        totalReadSize.add(size);
         ByteBuffer readBuf = LOCAL_READ_BUF.get();
         readBuf.position(0);
         readBuf.limit(size);
@@ -183,20 +188,6 @@ public class WALBucket {
                     fields[j] += readBuf.getLong(base + j * 8);
                 }
             }
-        }
-    }
-
-
-    private void addFiled(int off, long[] arr) throws IOException {
-        randomRead.add(1);
-        totalReadSize.add(64 * 8);
-        // 在文件中
-        ByteBuffer readBuf = LOCAL_READ_BUF.get();
-        readBuf.position(0);
-        readBuf.limit(64 * 8);
-        fileChannel.read(readBuf, off);
-        for (int i = 0; i < 64; i++) {
-            arr[i] += readBuf.getLong(i * 8);
         }
     }
 
