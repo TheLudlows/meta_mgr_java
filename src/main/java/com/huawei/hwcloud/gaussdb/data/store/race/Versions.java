@@ -11,7 +11,7 @@ public class Versions {
     protected long[] vs;
     protected int[] off;
     protected int size;
-    //protected long[] filed;
+    protected long[] filed;
 
     public Versions(int maxSize) {
         this.size = 0;
@@ -55,17 +55,14 @@ public class Versions {
                 '}';
     }
 
-/*    public void addField(long key,long[] l) {
-        if(Long.hashCode(key)%2 == 0) {
-            return;
-        }
+    public void addField(long[] l) {
         if (filed == null) {
             filed = new long[64];
         }
         for (int i = 0; i < 64; i++) {
             filed[i] += l[i];
         }
-    }*/
+    }
 
     public long maxVersion() {
         long max = 0;
