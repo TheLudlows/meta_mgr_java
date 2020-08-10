@@ -14,4 +14,4 @@ zip -r meta_mgr_java.zip src pom.xml jvm.options
 - bucket cache
 - thread cache
 - 1kb page
-
+- merge write 

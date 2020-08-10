@@ -59,13 +59,13 @@ public class WALBucket {
     private void tryRecover() throws IOException {
         if (keyPosition == 0) {
             // 预分配，效果不一般
-            ByteBuffer buf = LOCAL_WRITE_BUF.get();
+            /*ByteBuffer buf = LOCAL_WRITE_BUF.get();
             for (int i = 0; i < 400*1024; i++) {
                 buf.position(0);
                 fileChannel.write(buf, dataPosition);
                 dataPosition += 64 * 8;
             }
-            dataPosition = 0;
+            dataPosition = 0;*/
             return;
         }
         // 恢复文件数据的索引
