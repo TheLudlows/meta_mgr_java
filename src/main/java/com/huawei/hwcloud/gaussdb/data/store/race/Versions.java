@@ -37,7 +37,7 @@ public class Versions {
         if (size % page_field_num == 0) {
             off[size / page_field_num] = index;
         }
-        vs[size++] = (int) v;
+        vs[size++] = v;
 
     }
 

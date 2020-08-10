@@ -13,6 +13,7 @@ import java.io.IOException;
  * 1. mapped file 缺点：多次触发缺页中断，造成写入缓慢，优点：可更新
  * 2. mapped buffer + dio
  * 3. mapped buffer + channel 缺点：相比dio方式多一次复制
+ * 4. 同步写
  * <p>
  * 因此有几种不同的实现方式
  **/
