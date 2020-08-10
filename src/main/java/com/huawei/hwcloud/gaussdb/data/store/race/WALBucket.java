@@ -33,7 +33,7 @@ public class WALBucket {
     private FileChannel fileChannel;
     private FileChannel keyChannel;
 
-    public WALBucket(String dir,int id) {
+    public WALBucket(String dir, int id) {
         try {
             this.id = id;
             this.dir = dir;
@@ -80,7 +80,7 @@ public class WALBucket {
             for (int i = 0; i < 64; i++) {
                 field[i] = dataBuf.getLong(off + i * 8);
             }
-            if(id < BUCKET_SIZE/3) {
+            if (id < BUCKET_SIZE / 3) {
                 versions.addField(field);
             }
         }
@@ -106,7 +106,7 @@ public class WALBucket {
             writeData(writeBuf, item.getDelta(), pos);
             versions.add(v, pos);
         }
-        if(id < BUCKET_SIZE/3) {
+        if (id < BUCKET_SIZE / 3) {
             versions.addField(item.getDelta());
         }
         keyPosition += 20;
@@ -133,8 +133,8 @@ public class WALBucket {
         data.setVersion(v);
         long[] fields = data.getField();
         // use cache
-        if(versions.queryFunc(v) == 0) {
-            System.arraycopy(versions.filed,0,fields,0,64);
+        if (versions.queryFunc(v) == 0) {
+            System.arraycopy(versions.filed, 0, fields, 0, 64);
             return data;
         }
         mergeRead(fields, versions, v);
@@ -150,7 +150,7 @@ public class WALBucket {
                 i++;
                 continue;
             } else {
-                addMeetVersion(i, Math.min((i / page_field_num + 1) * page_field_num -1, last), fields, versions, v);
+                addMeetVersion(i, Math.min((i / page_field_num + 1) * page_field_num - 1, last), fields, versions, v);
                 i = (i / page_field_num + 1) * page_field_num;
             }
         }
@@ -191,11 +191,10 @@ public class WALBucket {
         for (int i = 0; i < 64; i++) {
             arr[i] += readBuf.getLong(i * 8);
         }
-
     }
 
     public void print() {
-        LOG(dir + " index size:" + index.size());
+        LOG(dir + " dataPosition:" + dataPosition + " keyPosition:" + keyPosition + " index size:" + index.size());
     }
 
     private void writeKey(ByteBuffer writeBuf, long key, long v, int off, long pos) throws IOException {
