@@ -20,4 +20,8 @@ public interface Constants {
      * 缓存比例
      */
     int cache_per = 3;
+
+    int wal_size = 10000;
+
+    int wal_mapped_size = wal_size * (64 * 8 + 16) + 4;
 }

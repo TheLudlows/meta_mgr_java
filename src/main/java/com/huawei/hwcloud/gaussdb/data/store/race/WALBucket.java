@@ -7,7 +7,9 @@ import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.LinkedHashMap;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
@@ -24,6 +26,9 @@ public class WALBucket {
     protected String dir;
     // 索引
     protected LongObjectHashMap<Versions> index;
+    // wal index
+    protected LinkedHashMap walIndex;
+
     protected int id;
 
     // 文件中的位置
@@ -31,6 +36,7 @@ public class WALBucket {
     private long keyPosition;
     private FileChannel fileChannel;
     private FileChannel keyChannel;
+    private MappedByteBuffer wal;
 
     public WALBucket(String dir, int id) {
         try {
@@ -40,8 +46,12 @@ public class WALBucket {
             index = new LongObjectHashMap<>();
             String dataFileName = dir + ".data";
             String keyFileName = dir + ".key";
+            String walFileName = dir + ".wal";
             this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
             this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
+            this.wal = FileChannel.open(new File(walFileName).toPath(), CREATE, READ, WRITE)
+                    .map(FileChannel.MapMode.READ_WRITE, 0, wal_mapped_size);
+
             dataPosition = (int) fileChannel.size();
             keyPosition = keyChannel.size();
 
