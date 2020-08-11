@@ -10,7 +10,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.cacheHit;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
 import static java.nio.file.StandardOpenOption.*;
@@ -18,6 +18,8 @@ import static java.nio.file.StandardOpenOption.*;
 public class WALBucket {
     public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data(64));
     // 4kb
+    public static final ThreadLocal<VersionCache> LOCAL_CACHE = ThreadLocal.withInitial(() -> new VersionCache());
+
     public static final ThreadLocal<ByteBuffer> LOCAL_READ_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8 * 8));
     public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
 
@@ -151,7 +153,36 @@ public class WALBucket {
             System.arraycopy(versions.filed, 0, fields, 0, 64);
             return data;
         }
-        mergeRead(fields, versions, v);
+        VersionCache cache = LOCAL_CACHE.get();
+        if (cache.key != k || cache.size != versions.size) {
+            cache.key = k;
+            cache.size = 0;
+            cache.buffer.position(0);
+            for (int i = 0; i < versions.off.length; i++) {
+                cache.buffer.limit((i + 1) * page_size);
+                fileChannel.read(cache.buffer, versions.off[i]);
+            }
+            for (int i = 0; i < versions.size; i++) {
+                int ver = versions.vs[i];
+                cache.add(ver);
+                if (ver <= v) {
+                    for (int j = 0; j < 64; j++) {
+                        fields[j] += cache.buffer.getLong(i * 64 * 8 + j * 8);
+                    }
+                }
+            }
+        } else {
+            cacheHit.add(1);
+            for (int i = 0; i < versions.size; i++) {
+                int ver = versions.vs[i];
+                if (ver <= v) {
+                    for (int j = 0; j < 64; j++) {
+                        fields[j] += cache.buffer.getLong(i * 64 * 8 + j * 8);
+                    }
+                }
+            }
+        }
+        //mergeRead(fields, versions, v);
         return data;
     }
 
@@ -165,14 +196,13 @@ public class WALBucket {
                 i++;
                 continue;
             } else {
-                addMeetVersion(i, Math.min((i / page_field_num + 1) * page_field_num - 1, last), fields, versions,v, readBuf);
+                addMeetVersion(i, Math.min((i / page_field_num + 1) * page_field_num - 1, last), fields, versions, v, readBuf);
                 i = (i / page_field_num + 1) * page_field_num;
             }
         }
     }
 
-    private void addMeetVersion(int first, int last, long[] fields, Versions versions,long v, ByteBuffer readBuf) throws IOException {
-        mergeRead.add(1);
+    private void addMeetVersion(int first, int last, long[] fields, Versions versions, long v, ByteBuffer readBuf) throws IOException {
         while (versions.vs[last] > v) {
             last--;
         }
@@ -201,7 +231,7 @@ public class WALBucket {
         writeBuf.putInt((int) v);
         writeBuf.putInt(off);
         writeBuf.limit(16);
-        writeBuf.flip();
+        writeBuf.position(0);
         keyChannel.write(writeBuf, keyPosition);
         keyPosition += 16;
     }

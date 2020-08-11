@@ -41,24 +41,24 @@ public class WALEngine implements DBEngine {
             try {
                 long lastWrite = 0;
                 long lastRead = 0;
-                long lastMergeRead = 0;
+                long lastHitCache = 0;
                 long lastRandomRead = 0;
                 long lastReadSize = 0;
                 while (true) {
                     long read = readCounter.sum();
                     long write = writeCounter.sum();
-                    long mr = mergeRead.sum();
+                    long hit = cacheHit.sum();
                     long rr = randomRead.sum();
                     long rs = totalReadSize.sum();
                     LOG("[LAST" + MONITOR_TIME + "ms],[Read " + (read - lastRead) + "],[Write " + (write - lastWrite)
-                            + "],[MergeRead " + (mr - lastMergeRead) + "],[RandomRead " + (rr - lastRandomRead) + "],[ReadSize "
-                            + ((rs - lastReadSize) / 1024 / 1024) + "M]" + ",[CPU " + cpuLoad() + "]"
+                            + "],[hit " + (hit - lastHitCache) + "],[RandomRead " + (rr - lastRandomRead) + "],[ReadSize "
+                            + ((rs - lastReadSize) / 1024 / 1024) + "M]"
                     );
 
                     LOG(mem());
                     lastRead = read;
                     lastWrite = write;
-                    lastMergeRead = mr;
+                    lastHitCache = hit;
                     lastRandomRead = rr;
                     lastReadSize = rs;
                     Thread.sleep(MONITOR_TIME);
