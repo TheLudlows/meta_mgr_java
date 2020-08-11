@@ -2,7 +2,7 @@
 -Xms4800m
 -Xmx4800m
 -XX:MaxDirectMemorySize=256m
--XX:NewRatio=3
+-XX:NewRatio=2
 -XX:+UseConcMarkSweepGC
 -XX:+UseParNewGC
 -XX:-UseBiasedLocking

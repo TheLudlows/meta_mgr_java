@@ -58,7 +58,7 @@ public class WALBucket {
 
     private void tryRecover() throws IOException {
         if (keyPosition == 0) {
-            // 预分配，效果不一般
+            // 预分配，效果一般
             /*ByteBuffer buf = LOCAL_WRITE_BUF.get();
             for (int i = 0; i < 400*1024; i++) {
                 buf.position(0);
@@ -147,7 +147,7 @@ public class WALBucket {
         data.setVersion(v);
         long[] fields = data.getField();
         // use cache
-       if (versions.queryFunc(v) == 0) {
+        if (versions.queryFunc(v) == 0) {
             System.arraycopy(versions.filed, 0, fields, 0, 64);
             return data;
         }
@@ -158,25 +158,25 @@ public class WALBucket {
     private void mergeRead(long[] fields, Versions versions, long v) throws IOException {
         int[] vs = versions.vs;
         int last = versions.lastLarge(v);
+        ByteBuffer readBuf = LOCAL_READ_BUF.get();
 
         for (int i = 0; i <= last; ) {
             if (vs[i] > v) {
                 i++;
                 continue;
             } else {
-                addMeetVersion(i, Math.min((i / page_field_num + 1) * page_field_num - 1, last), fields, versions, v);
+                addMeetVersion(i, Math.min((i / page_field_num + 1) * page_field_num - 1, last), fields, versions,v, readBuf);
                 i = (i / page_field_num + 1) * page_field_num;
             }
         }
     }
 
-    private void addMeetVersion(int first, int last, long[] fields, Versions versions, long v) throws IOException {
+    private void addMeetVersion(int first, int last, long[] fields, Versions versions,long v, ByteBuffer readBuf) throws IOException {
         mergeRead.add(1);
         while (versions.vs[last] > v) {
             last--;
         }
         int size = (last - first + 1) * 64 * 8;
-        ByteBuffer readBuf = LOCAL_READ_BUF.get();
         readBuf.position(0);
         readBuf.limit(size);
         long pos = (first % page_field_num) * 64L * 8 + versions.off[first / page_field_num];
