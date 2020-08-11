@@ -2,20 +2,16 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 
 import java.util.Arrays;
 
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.allMatchTimes;
-
 /**
  * as List<version-off>
  */
 public class Versions {
-    protected long[] vs;
+    protected int[] vs;
     protected int[] off;
     protected int size;
-    protected long[] filed;
-
     public Versions(int maxSize) {
         this.size = 0;
-        vs = new long[maxSize];
+        vs = new int[maxSize];
         off = new int[maxSize];
     }
 
@@ -28,12 +24,12 @@ public class Versions {
         System.out.println(v);
     }
 
-    public void add(long v, int index) {
+    public void add(int v, int index) {
         int maxSize = vs.length;
         if (size == maxSize) {
             //resize
             maxSize += 2;
-            long[] tempVS = new long[maxSize];
+            int[] tempVS = new int[maxSize];
             System.arraycopy(vs, 0, tempVS, 0, size);
 
             int[] tempOff = new int[maxSize];
@@ -53,55 +49,5 @@ public class Versions {
                 ", off=" + Arrays.toString(off) +
                 ", count=" + size +
                 '}';
-    }
-
-    public void addField(long[] l) {
-        if (filed == null) {
-            filed = new long[64];
-        }
-        for (int i = 0; i < 64; i++) {
-            filed[i] += l[i];
-        }
-    }
-
-    public long maxVersion() {
-        long max = 0;
-        for (int i = 0; i < size; i++) {
-            if (max < vs[i]) {
-                max = vs[i];
-            }
-        }
-        return max;
-    }
-
-    public int queryFunc(long version) {
-        int match = 0;
-        for (int i = 0; i < size; i++) {
-            if (version >= vs[i]) {
-                match++;
-            }
-        }
-        return match;
-        /*if (match == size) {
-            allMatchTims.add(1);
-            *//*if (filed == null) {// not in mem
-                return match;
-            }*//*
-            // all in mem
-            //return -1;
-        } else {
-            return match;
-        }*/
-    }
-
-    public int lastLarge(long l) {
-        int to = this.size - 1;
-        while (0 <= to) {
-            if (vs[to] <= l) {
-                return to;
-            }
-            to--;
-        }
-        return 0;
     }
 }

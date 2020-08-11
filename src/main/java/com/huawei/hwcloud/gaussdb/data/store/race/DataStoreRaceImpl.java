@@ -34,7 +34,6 @@ public class DataStoreRaceImpl implements DataStoreRace {
             LOG("all write:" + writeCounter.sum());
             LOG("all read:" + readCounter.sum());
             LOG(mem());
-            LOG("all meet:" + allMatchTimes.sum());
             LOG("random read:" + randomRead.sum());
             LOG("merge read:" + mergeRead.sum());
             LOG("total read size:" + totalReadSize.sum()/1024/1024 + "M");
@@ -53,7 +52,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
             long count = deltaPacket.getDeltaCount();
             long v = deltaPacket.getVersion();
             List<DeltaPacket.DeltaItem> list = deltaPacket.getDeltaItem();
-            Map<Long, DeltaPacket.DeltaItem> map = new HashMap<>();
+            Map<Long, DeltaPacket.DeltaItem> map = new HashMap<>(2);
             for (int i = 0; i < count; i++) {
                 long k = list.get(i).getKey();
                 DeltaPacket.DeltaItem item = list.get(i);

@@ -11,13 +11,17 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.randomRead;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.totalReadSize;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
 import static java.nio.file.StandardOpenOption.*;
 
 public class WALBucket {
     public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data(64));
+
+    public static final ThreadLocal<CacheVersions> LOCAL_CACHE = ThreadLocal.withInitial(() -> new CacheVersions());
+
     // 4kb
     public static final ThreadLocal<ByteBuffer> LOCAL_READ_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8 * 8));
     protected String dir;
@@ -70,8 +74,8 @@ public class WALBucket {
     private void tryRecover() throws IOException {
         walCount = counterBuf.getInt(0);
         wal.position(walCount * 64 * 8);
-        keyWal.position(walCount * 16);
-        int fileCount = (int) (keyPosition / 16);
+        keyWal.position(walCount * 12);
+        int fileCount = (int) (keyPosition / 12);
         this.count = walCount + fileCount;
         // 恢复文件数据的索引
         ByteBuffer keyBuf = ByteBuffer.allocate((int) keyPosition);
@@ -84,7 +88,7 @@ public class WALBucket {
         int off = 0;
         while (keyBuf.hasRemaining()) {
             long k = keyBuf.getLong();
-            long v = keyBuf.getLong();
+            int v = keyBuf.getInt();
             Versions versions = index.get(k);
 
             if (versions == null) {
@@ -105,8 +109,8 @@ public class WALBucket {
             for (int i = 0; i < walCount; i++) {
                 long k = keyWal.getLong(walOff);
                 walOff += 8;
-                long v = keyWal.getLong(walOff);
-                walOff += 8;
+                int v = keyWal.getInt(walOff);
+                walOff += 4;
                 Versions versions = index.get(k);
                 if (versions == null) {
                     versions = new Versions(DEFAULT_SIZE);
@@ -127,7 +131,7 @@ public class WALBucket {
         long key = item.getKey();
         // key-version wal
         keyWal.putLong(key);
-        keyWal.putLong(v);
+        keyWal.putInt((int) v);
         // field wal
         for (long l : item.getDelta()) {
             wal.putLong(l);
@@ -146,8 +150,7 @@ public class WALBucket {
             versions = new Versions(DEFAULT_SIZE);
             index.put(key, versions);
         }
-        versions.add(v, count++);
-        //versions.addField(key,item.getDelta());
+        versions.add((int) v, count++);
     }
 
 
@@ -162,68 +165,34 @@ public class WALBucket {
         data.setKey(k);
         data.setVersion(v);
         long[] fields = data.getField();
-        /*int match = versions.queryFunc(v);
-        if (match == 0) {// no match
-            return null;
-        } else if (match == -1) { // all in mem
-            //System.arraycopy(versions.filed, 0, fields, 0, 64);
-            data.setField(fields);
-            return data;
-        } else if (match > 1) { // all or some in disk
-            if (mergeRead(fields, versions, v)) {
-                return data;
+        CacheVersions cacheVersions = LOCAL_CACHE.get();
+        if (cacheVersions.key != k) {
+            cacheVersions.reset();
+            cacheVersions.key = k;
+            for (int i = 0; i < size; i++) {
+                long ver = versions.vs[i];
+                int index = cacheVersions.addV((int) ver);
+                long[] f = cacheVersions.field[index];
+                addFiled(versions.off[i], f);
             }
-        }*/
-
+        } else if (cacheVersions.size < size) {
+            cacheVersions.reset();
+            for (int i = cacheVersions.size; i < size; i++) {
+                long ver = versions.vs[i];
+                int index =cacheVersions.addV((int) ver);
+                long[] f = cacheVersions.field[index];
+                addFiled(versions.off[i], f);
+            }
+        }
         for (int i = 0; i < size; i++) {
-            long ver = versions.vs[i];
+            long ver = cacheVersions.vs[i];
             if (ver <= v) {
-                addFiled(versions.off[i], fields);
+                for (int j = 0; j < 64; j++) {
+                    fields[j] += cacheVersions.field[i][j];
+                }
             }
         }
         return data;
-    }
-
-    private boolean mergeRead(long[] fields, Versions versions, long v) throws IOException {
-        int[] off = versions.off;
-        long[] vs = versions.vs;
-        int last = versions.lastLarge(v);
-        // 一部分在wal中，这种情况暂时不合并读
-        if (off[last] >= keyPosition / 16) {
-            return false;
-        }
-        for (int i = 0; i <= last; i++) {
-            if (vs[i] > v) {
-                continue;
-            }
-            int s = i;
-            for (int j = i; j <= last; i++, j++) {
-                if (j + 1 > last || off[j + 1] - off[s] > 5) {// 4kb page?
-                    addMeetVersion(s, j, fields, versions, v);
-                    break;
-                }
-            }
-        }
-        return true;
-    }
-
-    private void addMeetVersion(int first, int last, long[] fields, Versions versions, long v) throws IOException {
-        mergeRead.add(1);
-        int size = (versions.off[last] - versions.off[first] + 1) * 64 * 8;
-        totalReadSize.add(size);
-        ByteBuffer readBuf = LOCAL_READ_BUF.get();
-        readBuf.position(0);
-        readBuf.limit(size);
-        long pos = versions.off[first] * 64L * 8;
-        fileChannel.read(readBuf, pos);
-        for (int from = first; from <= last; from++) {
-            int base = (versions.off[from] - versions.off[first]) * 64 * 8;
-            if (versions.vs[from] <= v) {
-                for (int j = 0; j < 64; j++) {
-                    fields[j] += readBuf.getLong(base + j * 8);
-                }
-            }
-        }
     }
 
     private void flush_wal() throws IOException {
@@ -240,13 +209,13 @@ public class WALBucket {
 
     private void addFiled(Integer n, long[] arr) throws IOException {
         randomRead.add(1);
-        totalReadSize.add(64*8);
+        totalReadSize.add(64 * 8);
         long pos = n * 64L * 8;
         if (pos >= dataPosition) {
             // 在wal中
             int walPos = (int) (pos - dataPosition);
             for (int i = 0; i < 64; i++) {
-                arr[i] += wal.getLong(walPos + i * 8);
+                arr[i] = wal.getLong(walPos + i * 8);
             }
         } else {
             // 在文件中
@@ -255,7 +224,7 @@ public class WALBucket {
             readBuf.limit(64 * 8);
             fileChannel.read(readBuf, pos);
             for (int i = 0; i < 64; i++) {
-                arr[i] += readBuf.getLong(i * 8);
+                arr[i] = readBuf.getLong(i * 8);
             }
         }
     }

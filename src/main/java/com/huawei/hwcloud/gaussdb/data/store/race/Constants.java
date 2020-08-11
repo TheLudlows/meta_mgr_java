@@ -14,7 +14,7 @@ public interface Constants {
     /**
      * key-v wal size
      */
-    int KEY_MAPPED_SIZE = WAL_COUNT * 16;
+    int KEY_MAPPED_SIZE = WAL_COUNT * 12;
     /**
      * 监控时间
      */
