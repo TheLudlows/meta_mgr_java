@@ -11,6 +11,7 @@ import java.nio.channels.FileChannel;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.cacheHit;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.randomRead;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
 import static java.nio.file.StandardOpenOption.*;
@@ -154,6 +155,7 @@ public class WALBucket {
         }*/
         VersionCache cache = LOCAL_CACHE.get();
         if (cache.key != k || cache.size != versions.size) {
+            randomRead.add(1);
             cache.key = k;
             cache.size = 0;
             cache.buffer.position(0);
@@ -183,6 +185,7 @@ public class WALBucket {
         }
         return data;
     }
+
     public void print() {
         LOG(dir + " dataPosition:" + dataPosition + " keyPosition:" + keyPosition + " index size:" + index.size());
     }
