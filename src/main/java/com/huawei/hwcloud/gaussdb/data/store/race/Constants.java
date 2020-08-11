@@ -11,7 +11,7 @@ public interface Constants {
      * 默认数组长度
      * map<key,<[DEFAULT_SIZE]>
      */
-    int DEFAULT_SIZE = 2;
+    int DEFAULT_SIZE = 4;
 
     int page_field_num = 4;
     int page_size = 64 * 8 * page_field_num;

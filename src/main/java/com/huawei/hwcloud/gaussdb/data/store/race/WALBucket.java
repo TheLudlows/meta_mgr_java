@@ -27,10 +27,9 @@ public class WALBucket {
     // 索引
     protected LongObjectHashMap<Versions> index;
     protected int id;
-
     // 文件中的位置
     private int dataPosition;
-    private long keyPosition;
+    private int keyPosition;
     private FileChannel fileChannel;
     private FileChannel keyChannel;
 
@@ -39,13 +38,13 @@ public class WALBucket {
             this.id = id;
             this.dir = dir;
             // 自动扩容吧
-            index = new LongObjectHashMap<>();
+            index = new LongObjectHashMap<>(1024 * 8 * 16);
             String dataFileName = dir + ".data";
             String keyFileName = dir + ".key";
             this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
             this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
             dataPosition = (int) fileChannel.size();
-            keyPosition = keyChannel.size();
+            keyPosition = (int) keyChannel.size();
 
             if (dataPosition % page_size != 0) {
                 dataPosition = (dataPosition / page_size + 1) * page_size;
@@ -71,7 +70,7 @@ public class WALBucket {
             return;
         }
         // 恢复文件数据的索引
-        ByteBuffer keyBuf = ByteBuffer.allocate((int) keyPosition);
+        ByteBuffer keyBuf = ByteBuffer.allocate(keyPosition);
         ByteBuffer dataBuf = ByteBuffer.allocate(dataPosition);
 
         fileChannel.read(dataBuf, 0);
@@ -98,9 +97,9 @@ public class WALBucket {
             field[i] = dataBuf.getLong(off + i * 8);
         }
         //cache
-        if (id < BUCKET_SIZE / cache_per) {
+       /* if (id < BUCKET_SIZE / cache_per) {
             versions.addField(field);
-        }
+        }*/
     }
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {
@@ -123,9 +122,9 @@ public class WALBucket {
         writeData(writeBuf, item.getDelta(), pos);
         versions.add((int) v, pos);
         writeKey(writeBuf, key, v, pos);
-        if (id < BUCKET_SIZE / cache_per) {
+        /*if (id < BUCKET_SIZE / cache_per) {
             versions.addField(item.getDelta());
-        }
+        }*/
     }
 
     /**
@@ -149,10 +148,10 @@ public class WALBucket {
         data.setVersion(v);
         long[] fields = data.getField();
         // use cache
-        if (versions.queryFunc(v) == 0) {
+        /*if (versions.queryFunc(v) == 0) {
             System.arraycopy(versions.filed, 0, fields, 0, 64);
             return data;
-        }
+        }*/
         VersionCache cache = LOCAL_CACHE.get();
         if (cache.key != k || cache.size != versions.size) {
             cache.key = k;
@@ -182,10 +181,36 @@ public class WALBucket {
                 }
             }
         }
-        //mergeRead(fields, versions, v);
         return data;
     }
+    public void print() {
+        LOG(dir + " dataPosition:" + dataPosition + " keyPosition:" + keyPosition + " index size:" + index.size());
+    }
 
+    private void writeKey(ByteBuffer writeBuf, long key, long v, int off) throws IOException {
+        writeBuf.position(0);
+        writeBuf.putLong(key);
+        writeBuf.putInt((int) v);
+        writeBuf.putInt(off);
+        writeBuf.limit(16);
+        writeBuf.position(0);
+        keyChannel.write(writeBuf, keyPosition);
+        keyPosition += 16;
+    }
+
+    public void writeData(ByteBuffer writeBuf, long[] f, long off) throws IOException {
+        writeBuf.position(0);
+        writeBuf.limit(64 * 8);
+        for (long l : f) {
+            writeBuf.putLong(l);
+        }
+        writeBuf.position(0);
+        fileChannel.write(writeBuf, off);
+    }
+
+    /**
+     *  no cache
+     */
     private void mergeRead(long[] fields, Versions versions, long v) throws IOException {
         int[] vs = versions.vs;
         int last = versions.lastLarge(v);
@@ -219,31 +244,6 @@ public class WALBucket {
                 }
             }
         }
-    }
-
-    public void print() {
-        LOG(dir + " dataPosition:" + dataPosition + " keyPosition:" + keyPosition + " index size:" + index.size());
-    }
-
-    private void writeKey(ByteBuffer writeBuf, long key, long v, int off) throws IOException {
-        writeBuf.position(0);
-        writeBuf.putLong(key);
-        writeBuf.putInt((int) v);
-        writeBuf.putInt(off);
-        writeBuf.limit(16);
-        writeBuf.position(0);
-        keyChannel.write(writeBuf, keyPosition);
-        keyPosition += 16;
-    }
-
-    public void writeData(ByteBuffer writeBuf, long[] f, long off) throws IOException {
-        writeBuf.position(0);
-        writeBuf.limit(64 * 8);
-        for (long l : f) {
-            writeBuf.putLong(l);
-        }
-        writeBuf.flip();
-        fileChannel.write(writeBuf, off);
     }
 }
 

@@ -11,7 +11,7 @@ public class Versions {
     protected int[] vs;
     protected int[] off;
     protected int size;
-    protected long[] filed;
+    //protected long[] filed;
 
     public Versions(int maxSize) {
         this.size = 0;
@@ -50,17 +50,17 @@ public class Versions {
                 '}';
     }
 
-   public void addField(long[] l) {
+  /* public void addField(long[] l) {
         if (filed == null) {
             filed = new long[64];
         }
         for (int i = 0; i < 64; i++) {
             filed[i] += l[i];
         }
-    }
+    }*/
 
 
-    public int queryFunc(long version) {
+/*    public int queryFunc(long version) {
         int match = 0;
         for (int i = 0; i < size; i++) {
             if (version >= vs[i]) {
@@ -72,17 +72,7 @@ public class Versions {
         }else {
             return 1;
         }
-        /*if (match == size) {
-            allMatchTims.add(1);
-            *//*if (filed == null) {// not in mem
-                return match;
-            }*//*
-            // all in mem
-            //return -1;
-        } else {
-            return match;
-        }*/
-    }
+    }*/
 
     public int lastLarge(long l) {
         int to = this.size - 1;
