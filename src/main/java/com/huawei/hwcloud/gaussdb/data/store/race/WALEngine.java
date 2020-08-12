@@ -33,7 +33,7 @@ public class WALEngine implements DBEngine {
     @Override
     public void init() {
         for (int i = 0; i < BUCKET_SIZE; i++) {
-            buckets[i] = new WALBucket(dir + i);
+            buckets[i] = new WALBucket(dir + i, i);
         }
         // 后台监控线程
         backPrint = new Thread(() ->

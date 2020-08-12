@@ -2,8 +2,6 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 
 import java.util.Arrays;
 
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.allMatchTimes;
-
 /**
  * as List<version-off>
  */
@@ -74,24 +72,14 @@ public class Versions {
         return max;
     }
 
-    public int queryFunc(long version) {
+    public boolean allMatch(long version) {
         int match = 0;
         for (int i = 0; i < size; i++) {
             if (version >= vs[i]) {
                 match++;
             }
         }
-        return match;
-        /*if (match == size) {
-            allMatchTims.add(1);
-            *//*if (filed == null) {// not in mem
-                return match;
-            }*//*
-            // all in mem
-            //return -1;
-        } else {
-            return match;
-        }*/
+        return match == size && filed!= null;
     }
 
     public int lastLarge(long l) {
