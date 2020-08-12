@@ -21,7 +21,6 @@ public class WALBucket {
     // 4kb
     public static final ThreadLocal<VersionCache> LOCAL_CACHE = ThreadLocal.withInitial(() -> new VersionCache());
 
-    public static final ThreadLocal<ByteBuffer> LOCAL_READ_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8 * 8));
     public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
 
     protected String dir;
@@ -143,9 +142,9 @@ public class WALBucket {
         if (versions == null) {
             return null;
         }
-        Data data = LOCAL_DATA.get();
+        VersionCache cache = LOCAL_CACHE.get();
+        Data data = cache.data;
         data.reset();
-        data.setKey(k);
         data.setVersion(v);
         long[] fields = data.getField();
         // use cache
@@ -153,19 +152,20 @@ public class WALBucket {
             System.arraycopy(versions.filed, 0, fields, 0, 64);
             return data;
         }*/
-        VersionCache cache = LOCAL_CACHE.get();
-        if (cache.key != k || cache.size != versions.size) {
-            randomRead.add(1);
+
+        if (cache.key != k) {
+            data.setKey(k);
             cache.key = k;
-            cache.size = 0;
             cache.buffer.position(0);
+            int size = versions.size * 64 * 8;
             for (int i = 0; i < versions.off.length; i++) {
-                cache.buffer.limit((i + 1) * page_size);
+                randomRead.add(1);
+                int limit = (i + 1) * page_size;
+                cache.buffer.limit(limit > size ? size : limit);
                 fileChannel.read(cache.buffer, versions.off[i]);
             }
             for (int i = 0; i < versions.size; i++) {
                 int ver = versions.vs[i];
-                cache.add(ver);
                 if (ver <= v) {
                     for (int j = 0; j < 64; j++) {
                         fields[j] += cache.buffer.getLong(i * 64 * 8 + j * 8);
@@ -209,44 +209,6 @@ public class WALBucket {
         }
         writeBuf.position(0);
         fileChannel.write(writeBuf, off);
-    }
-
-    /**
-     *  no cache
-     */
-    private void mergeRead(long[] fields, Versions versions, long v) throws IOException {
-        int[] vs = versions.vs;
-        int last = versions.lastLarge(v);
-        ByteBuffer readBuf = LOCAL_READ_BUF.get();
-
-        for (int i = 0; i <= last; ) {
-            if (vs[i] > v) {
-                i++;
-                continue;
-            } else {
-                addMeetVersion(i, Math.min((i / page_field_num + 1) * page_field_num - 1, last), fields, versions, v, readBuf);
-                i = (i / page_field_num + 1) * page_field_num;
-            }
-        }
-    }
-
-    private void addMeetVersion(int first, int last, long[] fields, Versions versions, long v, ByteBuffer readBuf) throws IOException {
-        while (versions.vs[last] > v) {
-            last--;
-        }
-        int size = (last - first + 1) * 64 * 8;
-        readBuf.position(0);
-        readBuf.limit(size);
-        long pos = (first % page_field_num) * 64L * 8 + versions.off[first / page_field_num];
-        fileChannel.read(readBuf, pos);
-        for (int from = first; from <= last; from++) {
-            int base = (from - first) * 64 * 8;
-            if (versions.vs[from] <= v) {
-                for (int j = 0; j < 64; j++) {
-                    fields[j] += readBuf.getLong(base + j * 8);
-                }
-            }
-        }
     }
 }
 

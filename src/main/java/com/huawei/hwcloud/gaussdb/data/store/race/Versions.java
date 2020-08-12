@@ -16,7 +16,7 @@ public class Versions {
     public Versions(int maxSize) {
         this.size = 0;
         vs = new int[maxSize];
-        off = new int[maxSize / page_field_num + 1];
+        off = new int[1];
     }
 
     public void add(int v, int index) {
