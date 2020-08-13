@@ -17,7 +17,7 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
 import static java.nio.file.StandardOpenOption.*;
 
 public class WALBucket {
-    public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data(64));
+    public static final ThreadLocal<VersionCache> LOCAL_DATA = ThreadLocal.withInitial(() -> new VersionCache());
     public static final ThreadLocal<ByteBuffer> LOCAL_READ_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
     public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
 
@@ -46,7 +46,6 @@ public class WALBucket {
             this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
             dataPosition = fileChannel.size();
             keyPosition = keyChannel.size();
-
             tryRecover();
         } catch (Throwable e) {
             LOG_ERR("init bucket error", e);
@@ -79,7 +78,7 @@ public class WALBucket {
                 field[i] = dataBuf.getLong();
             }
             versions.add(v, off++);
-            if(id < BUCKET_SIZE/2) {
+            if (id < BUCKET_SIZE / 2) {
                 versions.addField(field);
             }
         }
@@ -112,7 +111,7 @@ public class WALBucket {
             index.put(key, versions);
         }
         versions.add(v, count++);
-        if(id < BUCKET_SIZE/2) {
+        if (id < BUCKET_SIZE / 2) {
             versions.addField(item.getDelta());
         }
     }
@@ -123,41 +122,48 @@ public class WALBucket {
             return null;
         }
         int size = versions.size;
-        Data data = LOCAL_DATA.get();
+        VersionCache cache = LOCAL_DATA.get();
+        Data data = cache.data;
         data.reset();
-        data.setKey(k);
         data.setVersion(v);
         long[] fields = data.getField();
+        ByteBuffer buf = cache.buffer;
 
         if (versions.allMatch(v)) {
             allMatchTimes.add(1);
             System.arraycopy(versions.filed, 0, fields, 0, 64);
-            data.setField(fields);
             return data;
         }
 
-        for (int i = 0; i < size; i++) {
-            long ver = versions.vs[i];
-            if (ver <= v) {
-                addFiled(versions.off[i], fields);
+        if (cache.key != k) {
+            data.setKey(k);
+            cache.key = k;
+            buf.position(0);
+            for (int i = 0; i < size; i++) {
+                randomRead.add(1);
+                buf.limit((i + 1) * 64 * 8);
+                fileChannel.read(buf, versions.off[i] * 64 * 8);
+            }
+            for (int i = 0; i < size; i++) {
+                int ver = versions.vs[i];
+                if (ver <= v) {
+                    for (int j = 0; j < 64; j++) {
+                        fields[j] +=buf.getLong(i * 64 * 8 + j * 8);
+                    }
+                }
+            }
+        } else {
+            cacheHit.add(1);
+            for (int i = 0; i < size; i++) {
+                int ver = versions.vs[i];
+                if (ver <= v) {
+                    for (int j = 0; j < 64; j++) {
+                        fields[j] += buf.getLong(i * 64 * 8 + j * 8);
+                    }
+                }
             }
         }
         return data;
-    }
-
-    private void addFiled(Integer n, long[] arr) throws IOException {
-        randomRead.add(1);
-        totalReadSize.add(64 * 8);
-        long pos = n * 64L * 8;
-        // 在文件中
-        ByteBuffer readBuf = LOCAL_READ_BUF.get();
-        readBuf.position(0);
-        readBuf.limit(64 * 8);
-        fileChannel.read(readBuf, pos);
-        for (int i = 0; i < 64; i++) {
-            arr[i] += readBuf.getLong(i * 8);
-        }
-
     }
 
     public void print() {

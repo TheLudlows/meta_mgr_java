@@ -6,14 +6,14 @@ import java.util.Arrays;
  * as List<version-off>
  */
 public class Versions {
-    protected long[] vs;
+    protected int[] vs;
     protected int[] off;
     protected int size;
     protected long[] filed;
 
     public Versions(int maxSize) {
         this.size = 0;
-        vs = new long[maxSize];
+        vs = new int[maxSize];
         off = new int[maxSize];
     }
 
@@ -31,7 +31,7 @@ public class Versions {
         if (size == maxSize) {
             //resize
             maxSize += 2;
-            long[] tempVS = new long[maxSize];
+            int[] tempVS = new int[maxSize];
             System.arraycopy(vs, 0, tempVS, 0, size);
 
             int[] tempOff = new int[maxSize];
@@ -40,7 +40,7 @@ public class Versions {
             vs = tempVS;
             off = tempOff;
         }
-        vs[size] = v;
+        vs[size] = (int) v;
         off[size++] = index;
     }
 
@@ -80,16 +80,5 @@ public class Versions {
             }
         }
         return match == size && filed!= null;
-    }
-
-    public int lastLarge(long l) {
-        int to = this.size - 1;
-        while (0 <= to) {
-            if (vs[to] <= l) {
-                return to;
-            }
-            to--;
-        }
-        return 0;
     }
 }

@@ -47,7 +47,7 @@ public class WALEngine implements DBEngine {
                 while (true) {
                     long read = readCounter.sum();
                     long write = writeCounter.sum();
-                    long mr = mergeRead.sum();
+                    long mr = cacheHit.sum();
                     long rr = randomRead.sum();
                     long rs = totalReadSize.sum();
                     LOG("[LAST" + MONITOR_TIME + "ms],[Read " + (read - lastRead) + "],[Write " + (write - lastWrite)

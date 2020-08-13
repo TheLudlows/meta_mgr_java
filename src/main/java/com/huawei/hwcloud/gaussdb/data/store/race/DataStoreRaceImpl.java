@@ -36,7 +36,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
             LOG(mem());
             LOG("all match:" + allMatchTimes.sum());
             LOG("random read:" + randomRead.sum());
-            LOG("merge read:" + mergeRead.sum());
+            LOG("cache hit:" + cacheHit.sum());
             LOG("total read size:" + totalReadSize.sum()/1024/1024 + "M");
 
             dbEngine.print();
