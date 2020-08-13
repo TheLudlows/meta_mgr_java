@@ -123,8 +123,8 @@ public class WALBucket {
             pos = base + (versions.size % page_field_num) * 64 * 8;
         }
         writeData(writeBuf, item.getDelta(), pos);
-        versions.add((int) v, pos);
         writeKey(key, v, pos);
+        versions.add((int) v, pos);
     }
 
     public Data read(long k, long v) throws IOException {
@@ -179,7 +179,7 @@ public class WALBucket {
         LOG(dir + " dataPosition:" + dataPosition + " keyCounter:" + keyCounter + " index size:" + index.size());
     }
 
-    private void writeKey(long key, long v, int off) throws IOException {
+    private void writeKey(long key, long v, int off) {
         keyCounter++;
         keyBuf.putLong(key);
         keyBuf.putInt((int) v);

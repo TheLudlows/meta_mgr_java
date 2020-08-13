@@ -21,5 +21,5 @@ public interface Constants {
      */
     int cache_per = 3;
 
-    int key_mapped_size = 100000*16;
+    int key_mapped_size = 10000000;
 }

@@ -2,6 +2,7 @@ package com.huawei.hwcloud.gaussdb.data.store.race.utils;
 
 import com.sun.management.OperatingSystemMXBean;
 
+import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -48,11 +49,7 @@ public class Util {
         return percentCpuLoad;
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        for (int i = 0; i < 10; i++) {
-            Thread.sleep(100);
-            System.out.println(cpuLoad());
-        }
+    public static void main(String[] args) throws Exception {
     }
 
 }
