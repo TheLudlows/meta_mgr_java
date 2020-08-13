@@ -7,18 +7,17 @@ import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.cacheHit;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.randomRead;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
+import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static java.nio.file.StandardOpenOption.*;
 
 public class WALBucket {
-    public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data(64));
-    // 4kb
     public static final ThreadLocal<VersionCache> LOCAL_CACHE = ThreadLocal.withInitial(() -> new VersionCache());
 
     public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
@@ -29,9 +28,11 @@ public class WALBucket {
     protected int id;
     // 文件中的位置
     private int dataPosition;
-    private int keyPosition;
     private FileChannel fileChannel;
     private FileChannel keyChannel;
+    private MappedByteBuffer keyBuf;
+    private MappedByteBuffer counter;
+    private int keyCounter;
 
     public WALBucket(String dir, int id) {
         try {
@@ -41,10 +42,14 @@ public class WALBucket {
             index = new LongObjectHashMap<>(1024 * 8 * 16);
             String dataFileName = dir + ".data";
             String keyFileName = dir + ".key";
+            String countFileName = dir + ".count";
+
             this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
             this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
             dataPosition = (int) fileChannel.size();
-            keyPosition = (int) keyChannel.size();
+            this.keyBuf = keyChannel.map(READ_WRITE, 0, key_mapped_size);
+            this.counter = FileChannel.open(new File(countFileName).toPath(), CREATE, READ, WRITE).map(READ_WRITE, 0, 4);
+
 
             if (dataPosition % page_size != 0) {
                 dataPosition = (dataPosition / page_size + 1) * page_size;
@@ -58,7 +63,9 @@ public class WALBucket {
     }
 
     private void tryRecover() throws IOException {
-        if (keyPosition == 0) {
+        keyCounter = counter.getInt(0);
+        keyBuf.position(keyCounter * 16);
+        if (keyCounter == 0) {
             // 预分配，效果一般
             /*ByteBuffer buf = LOCAL_WRITE_BUF.get();
             for (int i = 0; i < 400*1024; i++) {
@@ -70,16 +77,12 @@ public class WALBucket {
             return;
         }
         // 恢复文件数据的索引
-        ByteBuffer keyBuf = ByteBuffer.allocate(keyPosition);
         ByteBuffer dataBuf = ByteBuffer.allocate(dataPosition);
-
         fileChannel.read(dataBuf, 0);
-        keyChannel.read(keyBuf, 0);
-        keyBuf.flip();
-        while (keyBuf.hasRemaining()) {
-            long k = keyBuf.getLong();
-            int v = keyBuf.getInt();
-            int off = keyBuf.getInt();
+        for (int i = 0; i < keyCounter; i++) {
+            long k = keyBuf.getLong(i * 16);
+            int v = keyBuf.getInt(i * 16 + 8);
+            int off = keyBuf.getInt(i * 16 + 12);
             buildIndex(k, v, off, dataBuf);
         }
     }
@@ -121,37 +124,22 @@ public class WALBucket {
         }
         writeData(writeBuf, item.getDelta(), pos);
         versions.add((int) v, pos);
-        writeKey(writeBuf, key, v, pos);
-        /*if (id < BUCKET_SIZE / cache_per) {
-            versions.addField(item.getDelta());
-        }*/
+        writeKey(key, v, pos);
     }
 
-    /**
-     * for (int i = 0; i < size; i++) {
-     * long ver = versions.vs[i];
-     * if (ver <= v) {
-     * int off = versions.off[i / 8] + (i % 8) * 64 * 8;
-     * addFiled(off, fields);
-     * //System.out.println(Arrays.toString(fields));
-     * }
-     * }
-     */
     public Data read(long k, long v) throws IOException {
         Versions versions = index.get(k);
         if (versions == null) {
             return null;
+        }
+        if (versions.off.length > maxSize.get()) {
+            maxSize.set(versions.off.length);
         }
         VersionCache cache = LOCAL_CACHE.get();
         Data data = cache.data;
         data.reset();
         data.setVersion(v);
         long[] fields = data.getField();
-        // use cache
-        /*if (versions.queryFunc(v) == 0) {
-            System.arraycopy(versions.filed, 0, fields, 0, 64);
-            return data;
-        }*/
 
         if (cache.key != k) {
             data.setKey(k);
@@ -164,6 +152,7 @@ public class WALBucket {
                 cache.buffer.limit(limit > size ? size : limit);
                 fileChannel.read(cache.buffer, versions.off[i]);
             }
+            totalReadSize.add(cache.buffer.limit());
             for (int i = 0; i < versions.size; i++) {
                 int ver = versions.vs[i];
                 if (ver <= v) {
@@ -187,18 +176,15 @@ public class WALBucket {
     }
 
     public void print() {
-        LOG(dir + " dataPosition:" + dataPosition + " keyPosition:" + keyPosition + " index size:" + index.size());
+        LOG(dir + " dataPosition:" + dataPosition + " keyCounter:" + keyCounter + " index size:" + index.size());
     }
 
-    private void writeKey(ByteBuffer writeBuf, long key, long v, int off) throws IOException {
-        writeBuf.position(0);
-        writeBuf.putLong(key);
-        writeBuf.putInt((int) v);
-        writeBuf.putInt(off);
-        writeBuf.limit(16);
-        writeBuf.position(0);
-        keyChannel.write(writeBuf, keyPosition);
-        keyPosition += 16;
+    private void writeKey(long key, long v, int off) throws IOException {
+        keyCounter++;
+        keyBuf.putLong(key);
+        keyBuf.putInt((int) v);
+        keyBuf.putInt(off);
+        counter.putInt(0, keyCounter);
     }
 
     public void writeData(ByteBuffer writeBuf, long[] f, long off) throws IOException {
