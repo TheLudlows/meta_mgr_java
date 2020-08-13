@@ -32,6 +32,7 @@ public class WALBucket {
     private int keyPosition;
     private FileChannel fileChannel;
     private FileChannel keyChannel;
+    private byte[] lock = new byte[0];
 
     public WALBucket(String dir, int id) {
         try {
@@ -102,26 +103,29 @@ public class WALBucket {
         }*/
     }
 
-    public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {
-        long key = item.getKey();
-        ByteBuffer writeBuf = LOCAL_WRITE_BUF.get();
-        Versions versions = index.get(key);
-        if (versions == null) {
-            versions = new Versions(DEFAULT_SIZE);
-            index.put(key, versions);
+    public void write(long v, DeltaPacket.DeltaItem item) throws IOException {
+        synchronized (lock) {
+            long key = item.getKey();
+            ByteBuffer writeBuf = LOCAL_WRITE_BUF.get();
+            int pos;
+            Versions versions = index.get(key);
+            if (versions == null) {
+                versions = new Versions(DEFAULT_SIZE);
+                index.put(key, versions);
+            }
+            // 计算这个version写盘的位置
+            if (versions.needAlloc()) {
+                pos = dataPosition;
+                dataPosition += page_size;
+            } else {
+                int base = versions.off[versions.size / page_field_num];
+                pos = base + (versions.size % page_field_num) * 64 * 8;
+            }
+            versions.add((int) v, pos);
+
+            writeData(writeBuf, item.getDelta(), pos);
+            writeKey(writeBuf, key, v, pos);
         }
-        int pos;
-        // 计算这个version写盘的位置
-        if (versions.needAlloc()) {
-            pos = dataPosition;
-            dataPosition += page_size;
-        } else {
-            int base = versions.off[versions.size / page_field_num];
-            pos = base + (versions.size % page_field_num) * 64 * 8;
-        }
-        writeData(writeBuf, item.getDelta(), pos);
-        versions.add((int) v, pos);
-        writeKey(writeBuf, key, v, pos);
         /*if (id < BUCKET_SIZE / cache_per) {
             versions.addField(item.getDelta());
         }*/
