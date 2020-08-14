@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import static com.huawei.hwcloud.gaussdb.data.store.race.BucketCache.WINDOWS_LEN;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
@@ -17,8 +18,6 @@ import static java.nio.file.StandardOpenOption.*;
 
 public class WALBucket {
     public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data(64));
-    // 4kb
-    public static final ThreadLocal<VersionCache> LOCAL_CACHE = ThreadLocal.withInitial(() -> new VersionCache());
 
     public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
 
@@ -31,6 +30,9 @@ public class WALBucket {
     private int keyPosition;
     private FileChannel fileChannel;
     private FileChannel keyChannel;
+    private int keyIdIndex;
+    private BucketCache bucketCache;
+    private Object ReadLock = new Object();
 
     public WALBucket(String dir, int id) {
         try {
@@ -44,7 +46,7 @@ public class WALBucket {
             this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
             dataPosition = (int) fileChannel.size();
             keyPosition = (int) keyChannel.size();
-
+            bucketCache = new BucketCache(WINDOWS_LEN);
             if (dataPosition % page_size != 0) {
                 dataPosition = (dataPosition / page_size + 1) * page_size;
             }
@@ -89,6 +91,9 @@ public class WALBucket {
         if (versions == null) {
             versions = new Versions(DEFAULT_SIZE);
             index.put(k, versions);
+            bucketCache.addKey(k);
+
+            versions.index =   keyIdIndex++;
         }
         versions.add(v, off);
         long[] field = new long[64];
@@ -109,6 +114,8 @@ public class WALBucket {
         if (versions == null) {
             versions = new Versions(DEFAULT_SIZE);
             index.put(key, versions);
+            versions.index = keyIdIndex++;
+            bucketCache.addKey(key);
         }
         int pos;
         // 计算这个version写盘的位置
@@ -143,48 +150,53 @@ public class WALBucket {
         if (versions == null) {
             return null;
         }
-        VersionCache cache = LOCAL_CACHE.get();
-        Data data = cache.data;
+        Data data = LOCAL_DATA.get();
         data.reset();
+        data.setKey(k);
         data.setVersion(v);
         long[] fields = data.getField();
-        // use cache
-        /*if (versions.queryFunc(v) == 0) {
-            System.arraycopy(versions.filed, 0, fields, 0, 64);
-            return data;
-        }*/
-
-        if (cache.key != k) {
-            data.setKey(k);
-            cache.key = k;
-            cache.buffer.position(0);
-            int size = versions.size * 64 * 8;
-            for (int i = 0; i < versions.off.length; i++) {
-                randomRead.add(1);
-                int limit = (i + 1) * page_size;
-                cache.buffer.limit(limit > size ? size : limit);
-                fileChannel.read(cache.buffer, versions.off[i]);
-            }
-            for (int i = 0; i < versions.size; i++) {
-                int ver = versions.vs[i];
-                if (ver <= v) {
-                    for (int j = 0; j < 64; j++) {
-                        fields[j] += cache.buffer.getLong(i * 64 * 8 + j * 8);
-                    }
-                }
-            }
-        } else {
-            cacheHit.add(1);
-            for (int i = 0; i < versions.size; i++) {
-                int ver = versions.vs[i];
-                if (ver <= v) {
-                    for (int j = 0; j < 64; j++) {
-                        fields[j] += cache.buffer.getLong(i * 64 * 8 + j * 8);
-                    }
-                }
+        synchronized (ReadLock) {
+            if (bucketCache.inCache(versions.index)) {
+                ByteBuffer buffer = bucketCache.getBuf(versions.index);
+                readIncache(fields, buffer, versions, v);
+            } else {
+                loadToCache(versions.index);
+                ByteBuffer buffer = bucketCache.getBuf(versions.index);
+                readIncache(fields, buffer, versions, v);
             }
         }
         return data;
+    }
+
+    private void loadToCache(int index) throws IOException {
+        int start = bucketCache.start(index);
+        int end = bucketCache.end(index);
+        for (int i = start; i < end; i++) {
+            long key = bucketCache.keys[i];
+            Versions v = this.index.get(key);
+            int size = v.size * 64 * 8;
+            ByteBuffer buffer = bucketCache.buffers[i - start];
+            buffer.position(0);
+            for (int j = 0; j < v.off.length; j++) {
+                randomRead.add(1);
+                int limit = (j + 1) * page_size;
+                buffer.limit(limit > size ? size : limit);
+                fileChannel.read(buffer, v.off[j]);
+            }
+        }
+        bucketCache.setCur(index);
+    }
+
+    private void readIncache(long[] fields, ByteBuffer buffer, Versions versions, long v) {
+        cacheHit.add(1);
+        for (int i = 0; i < versions.size; i++) {
+            int ver = versions.vs[i];
+            if (ver <= v) {
+                for (int j = 0; j < 64; j++) {
+                    fields[j] += buffer.getLong(i * 64 * 8 + j * 8);
+                }
+            }
+        }
     }
 
     public void print() {
