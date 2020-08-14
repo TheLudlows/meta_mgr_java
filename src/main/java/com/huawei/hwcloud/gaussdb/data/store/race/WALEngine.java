@@ -1,10 +1,14 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
+import com.carrotsearch.hppc.LongByteHashMap;
+import com.carrotsearch.hppc.LongByteMap;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.BUCKET_SIZE;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.MONITOR_TIME;
@@ -20,6 +24,10 @@ public class WALEngine implements DBEngine {
     private WALBucket buckets[];
     // 数据监控线程
     private Thread backPrint;
+    private AtomicInteger bIndex=new AtomicInteger(-1);
+    private ThreadLocal<Byte> BUCKETINDEX=ThreadLocal.withInitial(()->(byte)bIndex.incrementAndGet());
+    public static final LongByteHashMap keyBucketMap=new LongByteHashMap(4600001,0.99);
+    private byte[] lock=new byte[0];
 
     public WALEngine(String dir) {
         this.dir = dir + "/";
@@ -54,7 +62,6 @@ public class WALEngine implements DBEngine {
                             + "],[hit " + (hit - lastHitCache) + "],[RandomRead " + (rr - lastRandomRead) + "],[ReadSize "
                             + ((rs - lastReadSize) / 1024 / 1024) + "M]"
                     );
-
                     LOG(mem());
                     lastRead = read;
                     lastWrite = write;
@@ -73,7 +80,17 @@ public class WALEngine implements DBEngine {
 
     @Override
     public void write(long v, DeltaPacket.DeltaItem item) throws IOException {
-        buckets[index(item.getKey())].write(v, item);
+        Byte idx=keyBucketMap.getOrDefault(item.getKey(),(byte)-1);
+        if(idx==-1){
+            synchronized (lock){
+                idx=keyBucketMap.getOrDefault(item.getKey(),(byte)-1);
+                if(idx==-1){
+                    idx=BUCKETINDEX.get();
+                    keyBucketMap.put(item.getKey(),idx);
+                }
+            }
+        }
+        buckets[idx].write(v, item);
     }
 
     @Override
@@ -85,7 +102,11 @@ public class WALEngine implements DBEngine {
 
     @Override
     public Data read(long key, long v) throws IOException {
-        return buckets[index(key)].read(key, v);
+        Byte idx=keyBucketMap.get(key);
+        if(idx==null){
+            return null;
+        }
+        return buckets[idx].read(key, v);
     }
 
     @Override

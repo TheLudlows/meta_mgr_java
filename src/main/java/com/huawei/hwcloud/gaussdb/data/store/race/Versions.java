@@ -11,6 +11,7 @@ public class Versions {
     protected int[] vs;
     protected int[] off;
     protected int size;
+    protected byte bucketIndex;
     //protected long[] filed;
 
     public Versions(int maxSize) {

@@ -2,7 +2,7 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 
 public interface Constants {
 
-    int BUCKET_SIZE = 48;
+    int BUCKET_SIZE = 30;
     /**
      * 监控时间
      */

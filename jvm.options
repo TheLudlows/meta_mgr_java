@@ -1,7 +1,7 @@
 -server
--Xms4800m
--Xmx4800m
--XX:MaxDirectMemorySize=256m
+-Xms4300m
+-Xmx4300m
+-XX:MaxDirectMemorySize=556m
 -XX:NewRatio=2
 -XX:+UseConcMarkSweepGC
 -XX:+UseParNewGC

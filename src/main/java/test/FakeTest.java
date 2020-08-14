@@ -42,7 +42,7 @@ public class FakeTest {
             for(int j=7;j>=5;j--){
                 Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/j);
                 if (data != null) {
-                    if (data.getField()[0] != i * (j+1)) {
+                    if (data.getField()[0] != i *1* (j+1)) {
                         System.out.println(data);
                         System.out.println();
                         System.exit(1);

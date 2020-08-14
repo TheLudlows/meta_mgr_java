@@ -13,7 +13,7 @@ public class VersionCache {
     public VersionCache() {
         data = new Data(64);
         // 4kb
-        buffer = ByteBuffer.allocateDirect(max_cache_size);
+        buffer = ByteBuffer.allocate(max_cache_size);
     }
 
 }
