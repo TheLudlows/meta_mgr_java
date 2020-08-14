@@ -59,21 +59,6 @@ public class Versions {
         }
     }*/
 
-
-/*    public int queryFunc(long version) {
-        int match = 0;
-        for (int i = 0; i < size; i++) {
-            if (version >= vs[i]) {
-                match++;
-            }
-        }
-        if(match == size && filed != null) {
-            return 0;
-        }else {
-            return 1;
-        }
-    }*/
-
     public int lastLarge(long l) {
         int to = this.size - 1;
         while (0 <= to) {

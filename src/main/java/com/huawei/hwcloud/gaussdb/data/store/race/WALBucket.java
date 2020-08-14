@@ -10,8 +10,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.cacheHit;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.randomRead;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
 import static java.nio.file.StandardOpenOption.*;
@@ -103,6 +102,7 @@ public class WALBucket {
     }
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {
+        writeCounter.add(1);
         long key = item.getKey();
         ByteBuffer writeBuf = LOCAL_WRITE_BUF.get();
         Versions versions = index.get(key);
@@ -119,8 +119,9 @@ public class WALBucket {
             int base = versions.off[versions.size / page_field_num];
             pos = base + (versions.size % page_field_num) * 64 * 8;
         }
-        writeData(writeBuf, item.getDelta(), pos);
         versions.add((int) v, pos);
+
+        writeData(writeBuf, item.getDelta(), pos);
         writeKey(writeBuf, key, v, pos);
         /*if (id < BUCKET_SIZE / cache_per) {
             versions.addField(item.getDelta());
