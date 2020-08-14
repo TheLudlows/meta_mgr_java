@@ -104,10 +104,10 @@ public class WALBucket {
     }
 
     public void write(long v, DeltaPacket.DeltaItem item) throws IOException {
+        long key = item.getKey();
+        ByteBuffer writeBuf = LOCAL_WRITE_BUF.get();
+        int pos;
         synchronized (lock) {
-            long key = item.getKey();
-            ByteBuffer writeBuf = LOCAL_WRITE_BUF.get();
-            int pos;
             Versions versions = index.get(key);
             if (versions == null) {
                 versions = new Versions(DEFAULT_SIZE);
