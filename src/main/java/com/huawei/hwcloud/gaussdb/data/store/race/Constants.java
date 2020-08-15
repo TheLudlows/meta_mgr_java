@@ -20,4 +20,6 @@ public interface Constants {
      * 缓存比例
      */
     int cache_per = 3;
+
+    int mapped_size = 20000000;
 }
