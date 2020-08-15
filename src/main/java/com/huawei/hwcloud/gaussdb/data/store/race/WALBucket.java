@@ -21,6 +21,7 @@ public class WALBucket {
     public static final ThreadLocal<VersionCache> LOCAL_CACHE = ThreadLocal.withInitial(() -> new VersionCache());
 
     public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
+    public ByteBuffer cacheData;
 
     protected String dir;
     // 索引
@@ -37,7 +38,7 @@ public class WALBucket {
             this.id = id;
             this.dir = dir;
             // 自动扩容吧
-            index = new LongObjectHashMap<>(1024 * 8 * 16);
+            index = new LongObjectHashMap<>();
             String dataFileName = dir + ".data";
             String keyFileName = dir + ".key";
             this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
@@ -47,6 +48,9 @@ public class WALBucket {
 
             if (dataPosition % page_size != 0) {
                 dataPosition = (dataPosition / page_size + 1) * page_size;
+            }
+            if(id < cache_per) {
+                cacheData = ByteBuffer.allocateDirect(200627264);
             }
             long start = System.currentTimeMillis();
             tryRecover();
@@ -71,10 +75,13 @@ public class WALBucket {
         // 恢复文件数据的索引
         ByteBuffer keyBuf = ByteBuffer.allocate(keyPosition);
         ByteBuffer dataBuf = ByteBuffer.allocate(dataPosition);
-
         fileChannel.read(dataBuf, 0);
         keyChannel.read(keyBuf, 0);
         keyBuf.flip();
+        dataBuf.flip();
+        if(id < cache_per) {
+            cacheData.put(dataBuf);
+        }
         while (keyBuf.hasRemaining()) {
             long k = keyBuf.getLong();
             int v = keyBuf.getInt();
@@ -146,16 +153,24 @@ public class WALBucket {
         VersionCache cache = LOCAL_CACHE.get();
         Data data = cache.data;
         data.reset();
+        data.setKey(k);
         data.setVersion(v);
         long[] fields = data.getField();
         // use cache
-        /*if (versions.queryFunc(v) == 0) {
-            System.arraycopy(versions.filed, 0, fields, 0, 64);
+        if (id < cache_per) {
+            for (int i = 0; i < versions.size; i++) {
+                int ver = versions.vs[i];
+                int off = versions.off[i / page_field_num] + (i % page_field_num) * 64 * 8;
+                if (ver <= v) {
+                    for (int j = 0; j < 64; j++) {
+                        fields[j] += cacheData.getLong(off + j * 8);
+                    }
+                }
+            }
             return data;
-        }*/
+        }
 
         if (cache.key != k) {
-            data.setKey(k);
             cache.key = k;
             cache.buffer.position(0);
             int size = versions.size * 64 * 8;
@@ -203,7 +218,7 @@ public class WALBucket {
         keyPosition += 16;
     }
 
-    public void writeData(ByteBuffer writeBuf, long[] f, long off) throws IOException {
+    public void writeData(ByteBuffer writeBuf, long[] f, int off) throws IOException {
         writeBuf.position(0);
         writeBuf.limit(64 * 8);
         for (long l : f) {
@@ -211,6 +226,12 @@ public class WALBucket {
         }
         writeBuf.position(0);
         fileChannel.write(writeBuf, off);
+
+        if(id < cache_per) {
+            for (int i=0;i<64;i++) {
+                cacheData.putLong(off + i*8,f[i]);
+            }
+        }
     }
 }
 
