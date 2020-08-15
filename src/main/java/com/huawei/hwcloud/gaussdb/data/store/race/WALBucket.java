@@ -165,6 +165,7 @@ public class WALBucket {
                 cache.buffer.limit(limit > size ? size : limit);
                 fileChannel.read(cache.buffer, versions.off[i]);
             }
+            totalReadSize.add(cache.buffer.limit());
             for (int i = 0; i < versions.size; i++) {
                 int ver = versions.vs[i];
                 if (ver <= v) {
