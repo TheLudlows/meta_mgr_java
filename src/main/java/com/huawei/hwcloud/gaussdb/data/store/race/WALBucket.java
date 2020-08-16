@@ -29,8 +29,9 @@ public class WALBucket {
     // 文件中的位置
     private int dataPosition;
     private int keyPosition;
-    private FileChannel fileChannel;
+    private FileChannel writeChannel;
     private FileChannel keyChannel;
+    private FileChannel readChannel;
 
     public WALBucket(String dir, int id) {
         try {
@@ -40,9 +41,10 @@ public class WALBucket {
             index = new LongObjectHashMap<>(1024 * 8 * 16);
             String dataFileName = dir + ".data";
             String keyFileName = dir + ".key";
-            this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
+            this.writeChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, WRITE);
             this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
-            dataPosition = (int) fileChannel.size();
+            this.readChannel =  FileChannel.open(new File(dataFileName).toPath(), READ);
+            dataPosition = (int) writeChannel.size();
             keyPosition = (int) keyChannel.size();
 
             if (dataPosition % page_size != 0) {
@@ -72,7 +74,7 @@ public class WALBucket {
         ByteBuffer keyBuf = ByteBuffer.allocate(keyPosition);
         ByteBuffer dataBuf = ByteBuffer.allocate(dataPosition);
 
-        fileChannel.read(dataBuf, 0);
+        readChannel.read(dataBuf, 0);
         keyChannel.read(keyBuf, 0);
         keyBuf.flip();
         while (keyBuf.hasRemaining()) {
@@ -163,7 +165,7 @@ public class WALBucket {
                 randomRead.add(1);
                 int limit = (i + 1) * page_size;
                 cache.buffer.limit(limit > size ? size : limit);
-                fileChannel.read(cache.buffer, versions.off[i]);
+                readChannel.read(cache.buffer, versions.off[i]);
             }
             totalReadSize.add(cache.buffer.limit());
             for (int i = 0; i < versions.size; i++) {
@@ -210,7 +212,7 @@ public class WALBucket {
             writeBuf.putLong(l);
         }
         writeBuf.position(0);
-        fileChannel.write(writeBuf, off);
+        writeChannel.write(writeBuf, off);
     }
 }
 
