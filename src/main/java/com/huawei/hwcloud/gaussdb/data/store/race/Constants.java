@@ -19,5 +19,5 @@ public interface Constants {
     /**
      * 缓存比例
      */
-    int cache_per = 6;
+    int cache_per = 8;
 }

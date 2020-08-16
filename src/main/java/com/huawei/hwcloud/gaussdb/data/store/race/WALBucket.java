@@ -16,12 +16,11 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
 import static java.nio.file.StandardOpenOption.*;
 
 public class WALBucket {
-    public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data(64));
     // 4kb
     public static final ThreadLocal<VersionCache> LOCAL_CACHE = ThreadLocal.withInitial(() -> new VersionCache());
 
     public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
-    public ByteBuffer cacheData;
+    public ByteBuffer mappedData;
 
     protected String dir;
     // 索引
@@ -49,8 +48,8 @@ public class WALBucket {
             if (dataPosition % page_size != 0) {
                 dataPosition = (dataPosition / page_size + 1) * page_size;
             }
-            if(id < cache_per) {
-                cacheData = ByteBuffer.allocateDirect(200627264);
+            if (id < cache_per) {
+                mappedData = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, 200627264);
             }
             long start = System.currentTimeMillis();
             tryRecover();
@@ -75,12 +74,13 @@ public class WALBucket {
         // 恢复文件数据的索引
         ByteBuffer keyBuf = ByteBuffer.allocate(keyPosition);
         ByteBuffer dataBuf = ByteBuffer.allocate(dataPosition);
+        dataPosition = 0;
         fileChannel.read(dataBuf, 0);
         keyChannel.read(keyBuf, 0);
         keyBuf.flip();
         dataBuf.flip();
-        if(id < cache_per) {
-            cacheData.put(dataBuf);
+        if (id < cache_per) {
+            mappedData.put(dataBuf);
         }
         while (keyBuf.hasRemaining()) {
             long k = keyBuf.getLong();
@@ -96,6 +96,9 @@ public class WALBucket {
         if (versions == null) {
             versions = new Versions(DEFAULT_SIZE);
             index.put(k, versions);
+        }
+        if (versions.needAlloc()) {
+            dataPosition += page_size;
         }
         versions.add(v, off);
         long[] field = new long[64];
@@ -163,7 +166,7 @@ public class WALBucket {
                 int off = versions.off[i / page_field_num] + (i % page_field_num) * 64 * 8;
                 if (ver <= v) {
                     for (int j = 0; j < 64; j++) {
-                        fields[j] += cacheData.getLong(off + j * 8);
+                        fields[j] += mappedData.getLong(off + j * 8);
                     }
                 }
             }
@@ -219,18 +222,18 @@ public class WALBucket {
     }
 
     public void writeData(ByteBuffer writeBuf, long[] f, int off) throws IOException {
-        writeBuf.position(0);
-        writeBuf.limit(64 * 8);
-        for (long l : f) {
-            writeBuf.putLong(l);
-        }
-        writeBuf.position(0);
-        fileChannel.write(writeBuf, off);
-
-        if(id < cache_per) {
-            for (int i=0;i<64;i++) {
-                cacheData.putLong(off + i*8,f[i]);
+        if (id < cache_per) {
+            for (int i = 0; i < 64; i++) {
+                mappedData.putLong(off + i * 8, f[i]);
             }
+        } else {
+            writeBuf.position(0);
+            writeBuf.limit(64 * 8);
+            for (long l : f) {
+                writeBuf.putLong(l);
+            }
+            writeBuf.position(0);
+            fileChannel.write(writeBuf, off);
         }
     }
 }
