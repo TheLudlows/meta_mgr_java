@@ -41,7 +41,7 @@ public class DeltaPacket implements Serializable {
 
         private long key;
 
-        private long[] delta;
+        private int[] delta;
 
         @Override
         public String toString() {
@@ -62,7 +62,7 @@ public class DeltaPacket implements Serializable {
             return Long.hashCode(key);
         }
 
-        public void add(long[] f) {
+        public void add(int[] f) {
             for (int i = 0; i < 64; i++) {
                 this.delta[i] += f[i];
             }

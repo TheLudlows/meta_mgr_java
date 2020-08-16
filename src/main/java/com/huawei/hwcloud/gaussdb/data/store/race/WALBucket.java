@@ -91,9 +91,9 @@ public class WALBucket {
             index.put(k, versions);
         }
         versions.add(v, off);
-        long[] field = new long[64];
+        int[] field = new int[64];
         for (int i = 0; i < 64; i++) {
-            field[i] = dataBuf.getLong(off + i * 8);
+            field[i] = dataBuf.getInt(off + i * 4);
         }
         //cache
        /* if (id < BUCKET_SIZE / cache_per) {
@@ -117,7 +117,7 @@ public class WALBucket {
             dataPosition += page_size;
         } else {
             int base = versions.off[versions.size / page_field_num];
-            pos = base + (versions.size % page_field_num) * 64 * 8;
+            pos = base + (versions.size % page_field_num) * 64 * 4;
         }
         versions.add((int) v, pos);
 
@@ -128,16 +128,6 @@ public class WALBucket {
         }*/
     }
 
-    /**
-     * for (int i = 0; i < size; i++) {
-     * long ver = versions.vs[i];
-     * if (ver <= v) {
-     * int off = versions.off[i / 8] + (i % 8) * 64 * 8;
-     * addFiled(off, fields);
-     * //System.out.println(Arrays.toString(fields));
-     * }
-     * }
-     */
     public Data read(long k, long v) throws IOException {
         Versions versions = index.get(k);
         if (versions == null) {
@@ -158,7 +148,7 @@ public class WALBucket {
             data.setKey(k);
             cache.key = k;
             cache.buffer.position(0);
-            int size = versions.size * 64 * 8;
+            int size = versions.size * 64 * 4;
             for (int i = 0; i < versions.off.length; i++) {
                 randomRead.add(1);
                 int limit = (i + 1) * page_size;
@@ -170,7 +160,7 @@ public class WALBucket {
                 int ver = versions.vs[i];
                 if (ver <= v) {
                     for (int j = 0; j < 64; j++) {
-                        fields[j] += cache.buffer.getLong(i * 64 * 8 + j * 8);
+                        fields[j] += cache.buffer.getInt(i * 64 * 4 + j * 4);
                     }
                 }
             }
@@ -180,7 +170,7 @@ public class WALBucket {
                 int ver = versions.vs[i];
                 if (ver <= v) {
                     for (int j = 0; j < 64; j++) {
-                        fields[j] += cache.buffer.getLong(i * 64 * 8 + j * 8);
+                        fields[j] += cache.buffer.getInt(i * 64 * 4 + j * 4);
                     }
                 }
             }
@@ -203,11 +193,11 @@ public class WALBucket {
         keyPosition += 16;
     }
 
-    public void writeData(ByteBuffer writeBuf, long[] f, long off) throws IOException {
+    public void writeData(ByteBuffer writeBuf, int[] f, long off) throws IOException {
         writeBuf.position(0);
-        writeBuf.limit(64 * 8);
-        for (long l : f) {
-            writeBuf.putLong(l);
+        writeBuf.limit(64 * 4);
+        for (int l : f) {
+            writeBuf.putInt(l);
         }
         writeBuf.position(0);
         fileChannel.write(writeBuf, off);
