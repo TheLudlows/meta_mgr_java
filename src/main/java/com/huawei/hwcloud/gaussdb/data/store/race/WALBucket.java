@@ -18,7 +18,7 @@ import static java.nio.file.StandardOpenOption.*;
 public class WALBucket {
     public static final ThreadLocal<VersionCache> LOCAL_CACHE = ThreadLocal.withInitial(() -> new VersionCache());
 
-    public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
+    public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 4));
 
     protected String dir;
     // 索引
@@ -27,7 +27,9 @@ public class WALBucket {
     // 文件中的位置
     private int dataPosition;
     private int keyPosition;
-    private FileChannel fileChannel;
+    private FileChannel writeChannel;
+    private FileChannel readChannel;
+
     private FileChannel keyChannel;
 
     public WALBucket(String dir, int id) {
@@ -38,9 +40,11 @@ public class WALBucket {
             index = new LongObjectHashMap<>(1024 * 8 * 16);
             String dataFileName = dir + ".data";
             String keyFileName = dir + ".key";
-            this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
+            this.writeChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, WRITE);
             this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
-            dataPosition = (int) fileChannel.size();
+            dataPosition = (int) writeChannel.size();
+            this.readChannel = FileChannel.open(new File(dataFileName).toPath(),READ);
+
             keyPosition = (int) keyChannel.size();
 
             if (dataPosition % page_size != 0) {
@@ -70,7 +74,7 @@ public class WALBucket {
         ByteBuffer keyBuf = ByteBuffer.allocate(keyPosition);
         ByteBuffer dataBuf = ByteBuffer.allocate(dataPosition);
 
-        fileChannel.read(dataBuf, 0);
+        readChannel.read(dataBuf, 0);
         keyChannel.read(keyBuf, 0);
         keyBuf.flip();
         while (keyBuf.hasRemaining()) {
@@ -151,7 +155,7 @@ public class WALBucket {
                 randomRead.add(1);
                 int limit = (i + 1) * page_size;
                 cache.buffer.limit(limit > size ? size : limit);
-                fileChannel.read(cache.buffer, versions.off[i]);
+                readChannel.read(cache.buffer, versions.off[i]);
             }
             totalReadSize.add(cache.buffer.limit());
             for (int i = 0; i < versions.size; i++) {
@@ -198,7 +202,7 @@ public class WALBucket {
             writeBuf.putInt(l);
         }
         writeBuf.position(0);
-        fileChannel.write(writeBuf, off);
+        writeChannel.write(writeBuf, off);
     }
 }
 
