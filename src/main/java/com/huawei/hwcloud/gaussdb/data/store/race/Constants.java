@@ -14,10 +14,12 @@ public interface Constants {
     int DEFAULT_SIZE = 2;
 
     int page_field_num = 4;
-    int page_size = 64 * 8 * page_field_num;
+    int page_size = 64 * 4 * page_field_num;
 
     /**
      * 缓存比例
      */
     int cache_per = 3;
+
+    int CACHE_SIZE=1024*1024*1024;
 }
