@@ -24,8 +24,7 @@ public class WALEngine implements DBEngine {
     private WALBucket buckets[];
     // 数据监控线程
     private Thread backPrint;
-    private AtomicInteger bIndex=new AtomicInteger(-1);
-    private ThreadLocal<Byte> BUCKETINDEX=ThreadLocal.withInitial(()->(byte)bIndex.incrementAndGet());
+    private int bIndex;
     public static final LongByteHashMap keyBucketMap=new LongByteHashMap(4600001,0.99);
     private byte[] lock=new byte[0];
 
@@ -40,9 +39,14 @@ public class WALEngine implements DBEngine {
 
     @Override
     public void init() {
+        bIndex=-1;
         for (int i = 0; i < BUCKET_SIZE; i++) {
             buckets[i] = new WALBucket(dir + i, i);
+            if(bIndex==-1&&!buckets[i].isFull()){
+                bIndex=i;
+            }
         }
+        LOG("current bucketIndex is "+bIndex);
         // 后台监控线程
         backPrint = new Thread(() ->
         {
@@ -81,16 +85,23 @@ public class WALEngine implements DBEngine {
     @Override
     public void write(long v, DeltaPacket.DeltaItem item) throws IOException {
         Byte idx=keyBucketMap.getOrDefault(item.getKey(),(byte)-1);
-        if(idx==-1){
-            synchronized (lock){
-                idx=keyBucketMap.getOrDefault(item.getKey(),(byte)-1);
-                if(idx==-1){
-                    idx=BUCKETINDEX.get();
-                    keyBucketMap.put(item.getKey(),idx);
+        if(idx==-1) {
+            idx=(byte)bIndex;
+            if (!buckets[idx].write(v, item)) {
+                synchronized (lock) {
+                    if(!buckets[bIndex].write(v, item)){
+                        LOG("switch index from "+bIndex+" to " +(bIndex+1)+",dp:"+buckets[bIndex].dataPosition);
+                        if(!buckets[++bIndex].write(v, item)){
+                            LOG("bucket " + bIndex+ "is full,");
+                        }
+                    }
+                    idx=(byte)bIndex;
                 }
             }
+            keyBucketMap.put(item.getKey(),idx);
+        }else{
+            buckets[idx].write(v, item);
         }
-        buckets[idx].write(v, item);
     }
 
     @Override
