@@ -39,10 +39,10 @@ public class FakeTest {
 
     private static void read(DataStoreRace store, int ks, int ke) {
         for (int i = ks; i < ke; i++) {
-            for(int j=7;j>=5;j--){
+            for(int j=3;j>=3;j--){
                 Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/j);
                 if (data != null) {
-                    if (data.getField()[0] != i *1* (j+1)) {
+                    if (data.getField()[0] != i *2* (j+1)) {
                         System.out.println(data);
                         System.out.println();
                         System.exit(1);
@@ -65,7 +65,7 @@ public class FakeTest {
         List list = new ArrayList<>();
         deltaPacket.setDeltaItem(list);
         for (int i = ks; i < ke; i++) {
-            for (int j = 0; j < 8; j++) {
+            for (int j = 0; j < 4; j++) {
                 deltaPacket.setDeltaCount(1L);
                 deltaPacket.setVersion(j);
                 DeltaPacket.DeltaItem item = new DeltaPacket.DeltaItem();

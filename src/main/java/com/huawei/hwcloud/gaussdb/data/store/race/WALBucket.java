@@ -33,6 +33,7 @@ public class WALBucket {
     private int dataPosition;
     private int keyPosition;
     private FileChannel fileChannel;
+    private FileChannel fileChannelRead;
     //    private FileChannel keyChannel;
     private byte[] lock = new byte[0];
     private MappedByteBuffer keyWal;
@@ -46,6 +47,7 @@ public class WALBucket {
             String dataFileName = dir + ".data";
             String keyWALName = dir + ".key.wal";
             this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
+            this.fileChannelRead= FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
 //            this.keyChannel = FileChannel.open(new File(keyFileName).toPath(), CREATE, READ, WRITE);
             keyWal = FileChannel.open(new File(keyWALName).toPath(), CREATE, READ, WRITE)
                     .map(FileChannel.MapMode.READ_WRITE, 0, 17 * 1024 * 1024);
@@ -179,7 +181,7 @@ public class WALBucket {
                 int limit = (i + 1) * page_size;
                 limit=limit > size ? size : limit;
                 cache.buffer.limit(limit);
-                fileChannel.read(cache.buffer, versions.off[i]);
+                fileChannelRead.read(cache.buffer, versions.off[i]);
             }
             for (int i = 0; i < versions.size; i++) {
                 int ver = versions.vs[i];
