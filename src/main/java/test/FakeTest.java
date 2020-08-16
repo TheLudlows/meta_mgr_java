@@ -26,14 +26,14 @@ public class FakeTest {
             ts[i] = new Thread(() -> write(store, x * n, (x + 1) * n));
         }
         start();
-        System.out.println("write over cost:" + ((System.currentTimeMillis() - start) / 1000));
+        System.out.println("write over cost:" + ((System.currentTimeMillis() - start)));
         start = System.currentTimeMillis();
         for (int i = 0; i < thread_n; i++) {
             int x = i;
             ts[i] = new Thread(() -> read(store, x * n, (x + 1) * n));
         }
         start();
-        System.out.println("read cost: " + (System.currentTimeMillis() - start) / 1000);
+        System.out.println("read cost: " + (System.currentTimeMillis() - start));
         store.deInit();
     }
 
