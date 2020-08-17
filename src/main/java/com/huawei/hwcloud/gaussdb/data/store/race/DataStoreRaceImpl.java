@@ -50,7 +50,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
     public void writeDeltaPacket(DeltaPacket deltaPacket) {
         try {
             writeCounter.add(1);
-            long count = deltaPacket.getDeltaCount();
+            short count = deltaPacket.getDeltaCount();
             long v = deltaPacket.getVersion();
             List<DeltaPacket.DeltaItem> list = deltaPacket.getDeltaItem();
             Map<Long, DeltaPacket.DeltaItem> map = new HashMap<>();

@@ -64,7 +64,7 @@ public class FakeTest {
         deltaPacket.setDeltaItem(list);
         for (int i = ks; i < ke; i++) {
             for (int j = 0; j < 10; j++) {
-                deltaPacket.setDeltaCount(1L);
+                deltaPacket.setDeltaCount((short) 1);
                 deltaPacket.setVersion(j);
                 DeltaPacket.DeltaItem item = new DeltaPacket.DeltaItem();
                 item.setKey(i);
