@@ -14,7 +14,13 @@ public interface Constants {
     int DEFAULT_SIZE = 2;
 
     int page_field_num = 4;
-    int page_size = 64 * 4 * page_field_num;
+
+    int field_size=64 * 4;
+    int exceed_size=16;
+
+    int item_size=field_size+exceed_size;
+
+    int page_size = item_size * page_field_num;
 
     /**
      * 缓存比例

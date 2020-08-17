@@ -1,6 +1,7 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
 import com.carrotsearch.hppc.LongObjectHashMap;
+import com.huawei.hwcloud.gaussdb.data.store.race.utils.BytesUtil;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 
@@ -23,7 +24,7 @@ public class WALBucket {
     // 4kb
     public static final ThreadLocal<VersionCache> LOCAL_CACHE = ThreadLocal.withInitial(() -> new VersionCache());
 
-    public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
+    public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(item_size));
 
     protected String dir;
     // 索引
@@ -132,9 +133,9 @@ public class WALBucket {
                 dataPosition += page_size;
             } else {
                 int base = versions.off[versions.size / page_field_num];
-                pos = base + (versions.size % page_field_num) * 64 * 4;
+                pos = base + (versions.size % page_field_num) * item_size;
             }
-            writeData(writeBuf, item.getDelta(), pos);
+            writeData(writeBuf, item.getDelta(), item.getExceed(),pos);
             versions.add((int) v, pos);
             writeKey(writeBuf, key, v, pos,id);
 //            CacheService.saveCahe(key,item.getDelta(),versions.size-1);
@@ -188,7 +189,7 @@ public class WALBucket {
         if (cache.key != k) {
             cache.key = k;
             cache.buffer.position(0);
-            int size = versions.size * 64 * 4;
+            int size = versions.size * item_size;
             for (int i = 0; i < versions.off.length; i++) {
                 randomRead.add(1);
                 int limit = (i + 1) * page_size;
@@ -196,22 +197,32 @@ public class WALBucket {
                 cache.buffer.limit(limit);
                 fileChannelRead.read(cache.buffer, versions.off[i]);
             }
-            for (int i = 0; i < versions.size; i++) {
-                int ver = versions.vs[i];
-                if (ver <= v) {
-                    for (int j = 0; j < 64; j++) {
-                        fields[j] += cache.buffer.getInt(i * 64 * 4 + j * 4);
+        }
+        for (int i = 0; i < versions.size; i++) {
+            int ver = versions.vs[i];
+            if (ver <= v) {
+                long exceed1=cache.buffer.getLong(i *item_size+field_size);
+                long exceed2=cache.buffer.getLong(i *item_size+field_size+8);
+                int n;
+                for (int j = 0; j < 32; j++) {
+                    n=cache.buffer.getInt(i *item_size + j * 4);
+                    if(n<0){
+                        fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MIN_VALUE;
+                    }else if(n>0){
+                        fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MAX_VALUE;
+                    }else{
+                        LOG("zore value");
+                        fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MIN_VALUE;
                     }
                 }
-            }
-        } else {
-            cache.key = k;
-            cacheHit.add(1);
-            for (int i = 0; i < versions.size; i++) {
-                int ver = versions.vs[i];
-                if (ver <= v) {
-                    for (int j = 0; j < 64; j++) {
-                        fields[j] += cache.buffer.getInt(i * 64 * 4 + j * 4);
+                for (int j = 32; j < 64; j++) {
+                    n=cache.buffer.getInt(i *item_size + j * 4);
+                    if(n<0){
+                        fields[j] += n + ((exceed2>>62-(j-32)*2)&0x3)*Integer.MIN_VALUE;
+                    }else if(n>0){
+                        fields[j] += n + ((exceed2>>62-(j-32)*2)&0x3)*Integer.MAX_VALUE;
+                    }else{
+                        LOG("zore value");
                     }
                 }
             }
@@ -238,12 +249,14 @@ public class WALBucket {
         keyPosition += 16;
     }
 
-    public void writeData(ByteBuffer writeBuf, int[] f, long off) throws IOException {
+    public void writeData(ByteBuffer writeBuf, int[] f,byte[] exceed, long off) throws IOException {
         writeBuf.position(0);
-        writeBuf.limit(64 * 4);
+        writeBuf.limit(item_size);
         for (int l : f) {
             writeBuf.putInt(l);
         }
+        writeBuf.putLong(BytesUtil.byteArrToLong(exceed,0));
+        writeBuf.putLong(BytesUtil.byteArrToLong(exceed,8));
         writeBuf.position(0);
         fileChannel.write(writeBuf, off);
     }

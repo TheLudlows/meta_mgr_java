@@ -58,9 +58,13 @@ public class WALEngine implements DBEngine {
                     long hit = cacheHit.sum();
                     long rr = randomRead.sum();
                     long rs = totalReadSize.sum();
+                    int indexSize=0;
+                    for(WALBucket bucket:buckets){
+                        indexSize+=bucket.index.size();
+                    }
                     LOG("[LAST" + MONITOR_TIME + "ms],[Read " + (read - lastRead) + "],[Write " + (write - lastWrite)
                             + "],[hit " + (hit - lastHitCache) + "],[RandomRead " + (rr - lastRandomRead) + "],[ReadSize "
-                            + ((rs - lastReadSize) / 1024 / 1024) + "M]"
+                            + ((rs - lastReadSize) / 1024 / 1024) + "M],[totalIndex "+indexSize+"]"
                     );
                     LOG(mem());
                     lastRead = read;

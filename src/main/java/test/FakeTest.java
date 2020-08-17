@@ -100,9 +100,9 @@ public class FakeTest {
     private static void read(DataStoreRace store, int ks, int ke) {
         for (int i = ks; i < ke; i++) {
             for(int j=3;j>=3;j--){
-                Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/j);
+                Data data = store.readDataByVersion(Integer.MIN_VALUE+i, /*ThreadLocalRandom.current().nextInt(9999)*/j);
                 if (data != null) {
-                    if (data.getField()[0] != i *1* (j+1)) {
+                    if (data.getField()[0] != (Integer.MIN_VALUE+i) *2L* (j+1)) {
                         System.out.println(data);
                         System.out.println();
                         System.exit(1);
@@ -135,12 +135,18 @@ public class FakeTest {
             for (int j = 0; j < versions; j++) {
                 DeltaPacket deltaPacket = new DeltaPacket();
                 deltaPacket.setDeltaItem(new ArrayList<>(1));
-                deltaPacket.setDeltaCount((short)1);
+                deltaPacket.setDeltaCount((short)2);
                 deltaPacket.setVersion(j);
                 DeltaPacket.DeltaItem item = new DeltaPacket.DeltaItem();
-                item.setKey(i);
-                item.setDelta(randomDelta(i));
+                item.setKey(Integer.MIN_VALUE+i);
+                item.setDelta(randomDelta(Integer.MIN_VALUE+i));
                 deltaPacket.getDeltaItem().add(item);
+
+                item = new DeltaPacket.DeltaItem();
+                item.setKey(Integer.MIN_VALUE+i);
+                item.setDelta(randomDelta(Integer.MIN_VALUE+i));
+                deltaPacket.getDeltaItem().add(item);
+
                 result.get((int)(Math.random()*batchSize)).add(deltaPacket);
             }
         }

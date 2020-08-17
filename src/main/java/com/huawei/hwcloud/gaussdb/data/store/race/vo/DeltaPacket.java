@@ -42,6 +42,7 @@ public class DeltaPacket implements Serializable {
         private long key;
 
         private int[] delta;
+        private byte[] exceed;
 
         @Override
         public String toString() {

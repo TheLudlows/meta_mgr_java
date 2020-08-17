@@ -42,7 +42,6 @@ public class CacheService {
                 return false;
             }
         }
-        //TODO 并发时,先来index2 再来index1的情况
         int[][] exist = versionCaches.get(key);
         if(exist==null){
             if(index!=0){
