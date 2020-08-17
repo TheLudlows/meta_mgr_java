@@ -39,7 +39,7 @@ public class FakeTest {
 
     private static void read(DataStoreRace store, int ks, int ke) {
         for (int i = ks; i < ke; i++) {
-            Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/7);
+            Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/12);
             if (data != null) {
                 if (data.getField()[0] != i * 8) {
                     System.out.println(data);
