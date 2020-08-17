@@ -10,7 +10,7 @@ public interface Constants {
      */
     int WAL_COUNT = WAL_SIZE / 64 / 8;
 
-    int BUCKET_SIZE = 48;
+    int BUCKET_SIZE = 1;
     /**
      * key-v wal size
      */

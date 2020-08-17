@@ -12,7 +12,7 @@ import java.util.List;
  * 模拟本地测试
  */
 public class FakeTest {
-    static int thread_n = 30;
+    static int thread_n = 1;
     static int n = 10000;
     static Thread[] ts = new Thread[thread_n];
 
@@ -41,11 +41,13 @@ public class FakeTest {
         for (int i = ks; i < ke; i++) {
             Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/7);
             if (data != null) {
-                if (data.getField()[0] != i * 8) {
+                if (data.getField()[0] != i * 4) {
                     System.out.println(data);
                     System.out.println();
                     System.exit(1);
                 }
+                System.out.println(data);
+
             }
         }
     }

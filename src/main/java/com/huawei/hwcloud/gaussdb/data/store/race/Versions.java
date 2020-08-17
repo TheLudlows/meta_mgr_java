@@ -6,32 +6,25 @@ import java.util.Arrays;
  * as List<version-off>
  */
 public class Versions {
-    protected long[] vs;
+    protected int[] vs;
     protected int[] off;
     protected int size;
-    protected long[] filed;
 
     public Versions(int maxSize) {
         this.size = 0;
-        vs = new long[maxSize];
+        vs = new int[maxSize];
         off = new int[maxSize];
     }
 
     public static void main(String[] args) {
-        Versions v = new Versions(3);
-        v.add(1, 1);
-        v.add(1, 2);
-        v.add(1, 3);
-        v.add(1, 4);
-        System.out.println(v);
     }
 
-    public void add(long v, int index) {
+    public void add(int v, int index) {
         int maxSize = vs.length;
         if (size == maxSize) {
             //resize
             maxSize += 2;
-            long[] tempVS = new long[maxSize];
+            int[] tempVS = new int[maxSize];
             System.arraycopy(vs, 0, tempVS, 0, size);
 
             int[] tempOff = new int[maxSize];
@@ -39,6 +32,13 @@ public class Versions {
 
             vs = tempVS;
             off = tempOff;
+        }
+        // update
+        for(int i=0;i<size;i++) {
+            if(vs[i] == v) {
+                off[i] = index;
+            }
+            return;
         }
         vs[size] = v;
         off[size++] = index;
@@ -51,15 +51,6 @@ public class Versions {
                 ", off=" + Arrays.toString(off) +
                 ", count=" + size +
                 '}';
-    }
-
-    public void addField(long[] l) {
-        if (filed == null) {
-            filed = new long[64];
-        }
-        for (int i = 0; i < 64; i++) {
-            filed[i] += l[i];
-        }
     }
 
     public long maxVersion() {
@@ -79,7 +70,7 @@ public class Versions {
                 match++;
             }
         }
-        return match == size && filed!= null;
+        return match == size;
     }
 
     public int lastLarge(long l) {
