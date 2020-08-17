@@ -6,7 +6,6 @@ import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
@@ -74,29 +73,26 @@ public class WALBucket {
 
     public synchronized void write(long v, DeltaPacket.DeltaItem item) throws IOException {
         long key = item.getKey();
-        if(key==1) {
-            System.out.println(1);
-        }
         long[] field = item.getDelta();
         Versions versions = index.get(key);
         if (versions == null) {
             versions = new Versions(DEFAULT_SIZE);
             index.put(key, versions);
             versions.add((int) v, count++);
-            appendData(key, v,field);
+            appendData(key, v, field);
         } else {
             ByteBuffer buf = LOCAL_WRITE_BUF.get();
             buf.position(0);
             buf.limit(versions.size * field_size);
             fileChannel.read(buf, versions.off[0] * 64 * 8);
             buf.limit(versions.size * field_size + field_size);
-            for(int i=0;i<64;i++) {
+            for (int i = 0; i < 64; i++) {
                 buf.putLong(field[i]);
             }
             buf.flip();
             fileChannel.write(buf, dataPosition);
             // 更新索引
-            for(int i=0;i<versions.size;i++) {
+            for (int i = 0; i < versions.size; i++) {
                 versions.off[i] = count++;
             }
             versions.add((int) v, count++);
@@ -104,13 +100,13 @@ public class WALBucket {
             // 更新key
             buf.position(0);
             buf.limit(versions.size * 12);
-            for(int i=0;i<versions.size ;i++) {
+            for (int i = 0; i < versions.size; i++) {
                 buf.putLong(key);
                 buf.putInt(versions.vs[i]);
             }
             buf.flip();
-            keyChannel.write(buf,keyPosition);
-            keyPosition+=buf.limit();
+            keyChannel.write(buf, keyPosition);
+            keyPosition += buf.limit();
         }
 
     }
@@ -147,7 +143,6 @@ public class WALBucket {
         data.setKey(k);
         data.setVersion(v);
         long[] fields = data.getField();
-
         if (cache.key != k) {
             data.setKey(k);
             cache.key = k;

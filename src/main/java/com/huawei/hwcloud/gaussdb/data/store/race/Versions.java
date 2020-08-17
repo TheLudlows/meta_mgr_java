@@ -37,8 +37,8 @@ public class Versions {
         for(int i=0;i<size;i++) {
             if(vs[i] == v) {
                 off[i] = index;
+                return;
             }
-            return;
         }
         vs[size] = v;
         off[size++] = index;
