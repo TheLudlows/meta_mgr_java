@@ -13,7 +13,7 @@ import java.util.List;
  */
 public class FakeTest {
     static int thread_n = 30;
-    static int n = 5000;
+    static int n = 10000;
     static Thread[] ts = new Thread[thread_n];
 
     public static void main(String[] args) throws InterruptedException {
@@ -26,14 +26,14 @@ public class FakeTest {
             ts[i] = new Thread(() -> write(store, x * n, (x + 1) * n));
         }
         start();
-        System.out.println("write over cost:" + ((System.currentTimeMillis() - start) / 1000));
+        System.out.println("write over cost:" + ((System.currentTimeMillis() - start)));
         start = System.currentTimeMillis();
         for (int i = 0; i < thread_n; i++) {
             int x = i;
             ts[i] = new Thread(() -> read(store, x * n, (x + 1) * n));
         }
         start();
-        System.out.println("read cost: " + (System.currentTimeMillis() - start) / 1000);
+        System.out.println("read cost: " + (System.currentTimeMillis() - start));
         store.deInit();
     }
 
@@ -50,8 +50,8 @@ public class FakeTest {
         }
     }
 
-    public static long[] randomDelta(int d) {
-        long[] longs = new long[64];
+    public static int[] randomDelta(int d) {
+        int[] longs = new int[64];
         for (int i = 0; i < 64; i++) {
             longs[i] = d;
         }
@@ -63,7 +63,7 @@ public class FakeTest {
         List list = new ArrayList<>();
         deltaPacket.setDeltaItem(list);
         for (int i = ks; i < ke; i++) {
-            for (int j = 0; j < 10; j++) {
+            for (int j = 0; j < 4; j++) {
                 deltaPacket.setDeltaCount((short) 1);
                 deltaPacket.setVersion(j);
                 DeltaPacket.DeltaItem item = new DeltaPacket.DeltaItem();

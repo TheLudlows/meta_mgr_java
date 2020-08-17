@@ -74,9 +74,9 @@ public class WALBucket {
                 versions = new Versions(DEFAULT_SIZE);
                 index.put(k, versions);
             }
-            long[] field = new long[64];
+            int[] field = new int[64];
             for (int i = 0; i < 64; i++) {
-                field[i] = dataBuf.getLong();
+                field[i] = dataBuf.getInt();
             }
             versions.add(v, off++);
             if(id < BUCKET_SIZE/2) {
@@ -98,14 +98,14 @@ public class WALBucket {
 
 
         buf.position(0);
-        buf.limit(64 * 8);
-        for (long l : item.getDelta()) {
-            buf.putLong(l);
+        buf.limit(64 * 4);
+        for (int l : item.getDelta()) {
+            buf.putInt(l);
         }
         buf.position(0);
         fileChannel.write(buf, dataPosition);
         keyPosition += 12;
-        dataPosition += 64 * 8;
+        dataPosition += 64 * 4;
         Versions versions = index.get(key);
         if (versions == null) {
             versions = new Versions(DEFAULT_SIZE);
@@ -147,15 +147,15 @@ public class WALBucket {
 
     private void addFiled(Integer n, long[] arr) throws IOException {
         randomRead.add(1);
-        totalReadSize.add(64 * 8);
-        long pos = n * 64L * 8;
+        totalReadSize.add(64 * 4);
+        long pos = n * 64L * 4;
         // 在文件中
         ByteBuffer readBuf = LOCAL_READ_BUF.get();
         readBuf.position(0);
-        readBuf.limit(64 * 8);
+        readBuf.limit(64 * 4);
         fileChannel.read(readBuf, pos);
         for (int i = 0; i < 64; i++) {
-            arr[i] += readBuf.getLong(i * 8);
+            arr[i] += readBuf.getInt(i * 4);
         }
 
     }

@@ -8,7 +8,7 @@ public interface Constants {
     /**
      * wal count 4096
      */
-    int WAL_COUNT = WAL_SIZE / 64 / 8;
+    int WAL_COUNT = WAL_SIZE / 64 / 4;
 
     int BUCKET_SIZE = 48;
     /**
@@ -23,6 +23,6 @@ public interface Constants {
      * 默认数组长度
      * map<key,<[DEFAULT_SIZE]>
      */
-    int DEFAULT_SIZE = 2;
+    int DEFAULT_SIZE = 4;
 
 }
