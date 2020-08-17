@@ -50,8 +50,8 @@ public class FakeTest {
         }
     }
 
-    public static int[] randomDelta(int d) {
-        int[] longs = new int[64];
+    public static long[] randomDelta(int d) {
+        long[] longs = new long[64];
         for (int i = 0; i < 64; i++) {
             longs[i] = d;
         }

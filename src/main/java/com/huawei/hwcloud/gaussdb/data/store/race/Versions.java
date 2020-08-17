@@ -53,7 +53,7 @@ public class Versions {
                 '}';
     }
 
-    public void addField(int[] l) {
+    public void addField(long[] l) {
         if (filed == null) {
             filed = new long[64];
         }

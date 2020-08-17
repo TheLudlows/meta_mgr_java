@@ -8,7 +8,7 @@ public interface Constants {
     /**
      * wal count 4096
      */
-    int WAL_COUNT = WAL_SIZE / 64 / 4;
+    int WAL_COUNT = WAL_SIZE / 64 / 8;
 
     int BUCKET_SIZE = 48;
     /**
