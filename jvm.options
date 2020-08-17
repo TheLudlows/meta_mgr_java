@@ -3,8 +3,7 @@
 -Xmx4300m
 -XX:MaxDirectMemorySize=666m
 -XX:NewRatio=2
--XX:+UseConcMarkSweepGC
--XX:+UseParNewGC
+-XX:+UseAdaptiveSizePolicy
 -XX:-UseBiasedLocking
 -XX:+PrintGC
 -Xloggc:path

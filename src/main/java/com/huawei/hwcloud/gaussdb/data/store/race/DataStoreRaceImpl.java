@@ -68,11 +68,11 @@ public class DataStoreRaceImpl implements DataStoreRace {
                 }
                 exist.add(list.get(i));
             }
+            long[] sum=tempLong.get();
             for (List<DeltaPacket.DeltaItem> items : map.values()) {
                 DeltaPacket.DeltaItem first=items.get(0);
                 byte[] exceed=new byte[16];
                 if(items.size()>1){
-                    long[] sum=tempLong.get();
                     for(int i=0;i<64;i++){
                         sum[i]=0;
                     }

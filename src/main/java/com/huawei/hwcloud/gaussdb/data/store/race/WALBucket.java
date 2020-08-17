@@ -20,8 +20,6 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
 import static java.nio.file.StandardOpenOption.*;
 
 public class WALBucket {
-    public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data(64));
-    // 4kb
     public static final ThreadLocal<VersionCache> LOCAL_CACHE = ThreadLocal.withInitial(() -> new VersionCache());
 
     public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(item_size));
@@ -44,7 +42,7 @@ public class WALBucket {
             this.id = id;
             this.dir = dir;
             // 自动扩容吧
-            index = new LongObjectHashMap<>(1024 * 8 * 16);
+            index = new LongObjectHashMap<>();
             String dataFileName = dir + ".data";
             String keyWALName = dir + ".key.wal";
             this.fileChannel = FileChannel.open(new File(dataFileName).toPath(), CREATE, READ, WRITE);
