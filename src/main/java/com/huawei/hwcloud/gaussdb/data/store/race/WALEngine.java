@@ -84,12 +84,12 @@ public class WALEngine implements DBEngine {
 
     @Override
     public void write(long v, DeltaPacket.DeltaItem item) throws IOException {
-        Byte idx=keyBucketMap.getOrDefault(item.getKey(),(byte)-1);
+        byte idx=keyBucketMap.getOrDefault(item.getKey(),(byte)-1);
         if(idx==-1){
             synchronized (lock){
                 idx=keyBucketMap.getOrDefault(item.getKey(),(byte)-1);
                 if(idx==-1){
-                    idx=BUCKETINDEX.get();
+                    idx= (byte) (BUCKETINDEX.get()/2);
                     keyBucketMap.put(item.getKey(),idx);
                 }
             }
