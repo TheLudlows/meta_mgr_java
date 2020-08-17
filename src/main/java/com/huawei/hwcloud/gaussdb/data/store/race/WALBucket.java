@@ -82,6 +82,7 @@ public class WALBucket {
             appendData(key, v, field);
         } else {
             ByteBuffer buf = LOCAL_WRITE_BUF.get();
+            // ata append
             buf.position(0);
             buf.limit(versions.size * field_size);
             fileChannel.read(buf, versions.off[0] * 64 * 8);
@@ -97,7 +98,7 @@ public class WALBucket {
             }
             versions.add((int) v, count++);
             dataPosition += buf.limit();
-            // 更新key
+            // key append
             buf.position(0);
             buf.limit(versions.size * 12);
             for (int i = 0; i < versions.size; i++) {
@@ -147,11 +148,9 @@ public class WALBucket {
             data.setKey(k);
             cache.key = k;
             buf.position(0);
-            for (int i = 0; i < size; i++) {
-                randomRead.add(1);
-                buf.limit((i + 1) * 64 * 8);
-                fileChannel.read(buf, versions.off[i] * 64 * 8);
-            }
+            buf.limit(size* 64 * 8);
+            fileChannel.read(buf, versions.off[0] * 64 * 8);
+
             for (int i = 0; i < size; i++) {
                 int ver = versions.vs[i];
                 if (ver <= v) {
@@ -161,7 +160,6 @@ public class WALBucket {
                 }
             }
         } else {
-            //cacheHit.add(1);
             for (int i = 0; i < size; i++) {
                 int ver = versions.vs[i];
                 if (ver <= v) {
