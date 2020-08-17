@@ -53,7 +53,7 @@ public class WALBucket {
                     .map(FileChannel.MapMode.READ_WRITE, 0, 17 * 1024 * 1024);
             keyWal.position(0);
             keyPosition = keyWal.getInt(0);
-            dataPosition = keyPosition / 16 * 64 * 4;
+            dataPosition = (int)fileChannel.size();
 
             if (dataPosition % page_size != 0) {
                 dataPosition = (dataPosition / page_size + 1) * page_size;
