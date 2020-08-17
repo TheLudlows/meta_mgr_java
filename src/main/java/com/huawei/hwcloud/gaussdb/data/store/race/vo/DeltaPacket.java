@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.List;
 
 @Data
@@ -46,7 +47,9 @@ public class DeltaPacket implements Serializable {
         @Override
         public String toString() {
             return "DeltaItem{" +
-                    "key=" + key + '}';
+                    "key=" + key +
+                    ", delta=" + Arrays.toString(delta) +
+                    '}';
         }
 
         @Override
@@ -62,10 +65,17 @@ public class DeltaPacket implements Serializable {
             return Long.hashCode(key);
         }
 
-        public void add(int[] f) {
+        public boolean add(int[] f) {
             for (int i = 0; i < 64; i++) {
+                long add = 0L + this.delta[i] + f[i];
+                if(add > Integer.MAX_VALUE || add < Integer.MIN_VALUE) {
+                    return false;
+                }
+            }
+            for(int i=0;i<64;i++) {
                 this.delta[i] += f[i];
             }
+            return true;
         }
     }
 

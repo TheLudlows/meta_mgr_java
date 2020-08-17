@@ -41,7 +41,7 @@ public class FakeTest {
         for (int i = ks; i < ke; i++) {
             Data data = store.readDataByVersion(i, /*ThreadLocalRandom.current().nextInt(9999)*/7);
             if (data != null) {
-                if (data.getField()[0] != i * 7) {
+                if (data.getField()[0] != Integer.MAX_VALUE * 3L) {
                     System.out.println(data);
                     System.out.println();
                     System.exit(1);
@@ -53,7 +53,7 @@ public class FakeTest {
     public static int[] randomDelta(int d) {
         int[] longs = new int[64];
         for (int i = 0; i < 64; i++) {
-            longs[i] = d;
+            longs[i] = Integer.MAX_VALUE;
         }
         return longs;
     }

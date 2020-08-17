@@ -49,7 +49,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
     @Override
     public void writeDeltaPacket(DeltaPacket deltaPacket) {
         try {
-            long count = deltaPacket.getDeltaCount();
+            short count = deltaPacket.getDeltaCount();
             long v = deltaPacket.getVersion();
             List<DeltaPacket.DeltaItem> list = deltaPacket.getDeltaItem();
             if(count == 1) {
@@ -60,11 +60,16 @@ public class DataStoreRaceImpl implements DataStoreRace {
             for (int i = 0; i < count; i++) {
                 long k = list.get(i).getKey();
                 DeltaPacket.DeltaItem item = list.get(i);
+                if(k == 0) {
+                    System.out.println(item);
+                }
                 DeltaPacket.DeltaItem inMapItem;
                 if ((inMapItem = map.get(k)) == null) {
                     map.put(k, item);
                 } else {
-                    inMapItem.add(item.getDelta());
+                    if(!inMapItem.add(item.getDelta())) {
+                        dbEngine.write(v, item);
+                    }
                 }
             }
 

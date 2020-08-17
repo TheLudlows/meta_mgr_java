@@ -6,7 +6,7 @@ import java.nio.ByteBuffer;
 
 public class VersionCache {
     static final int max_cache_size = 64 * 4 * 8 * 8;
-    long key;
+    long key = -1;
     ByteBuffer buffer;
     Data data;
 
