@@ -23,7 +23,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
     @Override
     public boolean init(String dir) {
         try {
-//            CacheService.init();
+            CacheService.init();
             LOG("Init dir:" + dir);
             dbEngine = new WALEngine(dir);
             dbEngine.init();

@@ -13,14 +13,18 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.page_field_nu
  */
 public class CacheService {
     private static Map<Long,int[][]>  versionCaches=new ConcurrentHashMap<>(CACHE_SIZE/64/4/page_field_num+1,1);
+    private static Map<Long,byte[][]>  exceedCaches=new ConcurrentHashMap<>(CACHE_SIZE/64/4/page_field_num+1,1);
     private static AtomicInteger cacheLeft =new AtomicInteger(CACHE_SIZE/64/4/page_field_num);
     private static boolean full;
     private static int[][][] initFileds;
+    private static byte[][][] initExceeds;
 
     public static void init(){
         initFileds=new int[cacheLeft.get()][][];
+        initExceeds=new byte[cacheLeft.get()][][];
         for(int i=0;i<initFileds.length;i++){
             initFileds[i]=new int[4][];
+            initExceeds[i]=new byte[4][];
         }
         try {
             Thread.sleep(1000);
@@ -30,7 +34,7 @@ public class CacheService {
     }
 
 
-    public static boolean saveCahe(long key,int[] fields,int index){
+    public static boolean saveCahe(long key,int[] fields,byte[] exceed,int index){
         int left=-1;
         if(index==0){
             if(full){
@@ -43,6 +47,7 @@ public class CacheService {
             }
         }
         int[][] exist = versionCaches.get(key);
+        byte[][] existExceed;
         if(exist==null){
             if(index!=0){
                 return false;
@@ -51,19 +56,29 @@ public class CacheService {
                 exist = versionCaches.get(key);
                 if (exist == null) {
                     exist = initFileds[left];
+                    existExceed=initExceeds[left];
                     versionCaches.put(key, exist);
+                    exceedCaches.put(key,existExceed);
+                }else{
+                    existExceed=exceedCaches.get(key);
                 }
             }
+        }else{
+            existExceed=exceedCaches.get(key);
         }
+        existExceed[index]=exceed;
         exist[index]=fields;
         return true;
 
     }
 
-    public static int[][] getCache(long key){
+    public static int[][] getCacheData(long key){
         return versionCaches.get(key);
     }
 
+    public static byte[][] getCacheExceed(long key){
+        return exceedCaches.get(key);
+    }
 
 
 }

@@ -138,7 +138,7 @@ public class WALBucket {
             writeData(writeBuf, item.getDelta(), item.getExceed(),pos);
             versions.add((int) v, pos);
             writeKey(writeBuf, key, v, pos,id);
-//            CacheService.saveCahe(key,item.getDelta(),versions.size-1);
+            CacheService.saveCahe(key,item.getDelta(),item.getExceed(),versions.size-1);
         }
         /*if (id < BUCKET_SIZE / cache_per) {
             versions.addField(item.getDelta());
@@ -172,18 +172,43 @@ public class WALBucket {
             return data;
         }*/
 
-//        int[][] caches=CacheService.getCache(k);
-//        if(caches!=null){
-//            for (int i = 0; i < versions.size; i++) {
-//                int ver = versions.vs[i];
-//                if (ver <= v) {
-//                    for (int j = 0; j < 64; j++) {
-//                        fields[j] += caches[i][j];
-//                    }
-//                }
-//            }
-//            return data;
-//        }
+        int[][] caches=CacheService.getCacheData(k);
+        if(caches!=null){
+            byte[][] exceeds=CacheService.getCacheExceed(k);
+            for (int i = 0; i < versions.size; i++) {
+                int ver = versions.vs[i];
+                if (ver <= v) {
+                    long exceed1=BytesUtil.byteArrToLong(exceeds[i],0);
+                    long exceed2=BytesUtil.byteArrToLong(exceeds[i],8);
+                    int n;
+                    for (int j = 0; j < 32; j++) {
+                        n=caches[i][j];
+                        if(n<0){
+                            fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MIN_VALUE;
+                        }else if(n>0){
+                            fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MAX_VALUE;
+                        }else{
+                            LOG("zore value");
+                            fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MIN_VALUE;
+                        }
+                    }
+                    for (int j = 32; j < 64; j++) {
+                        n = caches[i][j];
+                        if(n<0){
+                            fields[j] += n + ((exceed2>>62-(j-32)*2)&0x3)*Integer.MIN_VALUE;
+                        }else if(n>0){
+                            fields[j] += n + ((exceed2>>62-(j-32)*2)&0x3)*Integer.MAX_VALUE;
+                        }else{
+                            LOG("zore value");
+                        }
+                    }
+
+
+
+                }
+            }
+            return data;
+        }
 
 
         if (cache.key != k) {
