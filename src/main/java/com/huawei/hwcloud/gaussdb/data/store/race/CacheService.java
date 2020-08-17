@@ -38,6 +38,7 @@ public class CacheService {
             }
             left=cacheLeft.decrementAndGet();
             if(left<=0){
+                full=true;
                 return false;
             }
         }

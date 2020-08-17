@@ -137,7 +137,7 @@ public class WALBucket {
             writeData(writeBuf, item.getDelta(), pos);
             versions.add((int) v, pos);
             writeKey(writeBuf, key, v, pos,id);
-            CacheService.saveCahe(key,item.getDelta(),versions.size-1);
+//            CacheService.saveCahe(key,item.getDelta(),versions.size-1);
         }
         /*if (id < BUCKET_SIZE / cache_per) {
             versions.addField(item.getDelta());
@@ -171,18 +171,18 @@ public class WALBucket {
             return data;
         }*/
 
-        int[][] caches=CacheService.getCache(k);
-        if(caches!=null){
-            for (int i = 0; i < versions.size; i++) {
-                int ver = versions.vs[i];
-                if (ver <= v) {
-                    for (int j = 0; j < 64; j++) {
-                        fields[j] += caches[i][j];
-                    }
-                }
-            }
-            return data;
-        }
+//        int[][] caches=CacheService.getCache(k);
+//        if(caches!=null){
+//            for (int i = 0; i < versions.size; i++) {
+//                int ver = versions.vs[i];
+//                if (ver <= v) {
+//                    for (int j = 0; j < 64; j++) {
+//                        fields[j] += caches[i][j];
+//                    }
+//                }
+//            }
+//            return data;
+//        }
 
 
         if (cache.key != k) {

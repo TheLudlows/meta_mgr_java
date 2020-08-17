@@ -18,7 +18,7 @@ public class DeltaPacket implements Serializable {
 
     private long version;
 
-    private long deltaCount;
+    private short deltaCount;
 
     private List<DeltaItem> deltaItem;
 

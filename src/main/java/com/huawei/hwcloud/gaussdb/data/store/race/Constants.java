@@ -21,5 +21,5 @@ public interface Constants {
      */
     int cache_per = 3;
 
-    int CACHE_SIZE=1024*1024*1024;
+    int CACHE_SIZE=1024*1024*100;
 }
