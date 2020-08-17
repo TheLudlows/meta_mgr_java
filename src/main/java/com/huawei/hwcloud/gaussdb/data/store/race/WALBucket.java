@@ -9,8 +9,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.BUCKET_SIZE;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.DEFAULT_SIZE;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
@@ -18,8 +17,8 @@ import static java.nio.file.StandardOpenOption.*;
 
 public class WALBucket {
     public static final ThreadLocal<Data> LOCAL_DATA = ThreadLocal.withInitial(() -> new Data(64));
-    public static final ThreadLocal<ByteBuffer> LOCAL_READ_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
-    public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(64 * 8));
+    public static final ThreadLocal<ByteBuffer> LOCAL_READ_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(field_size));
+    public static final ThreadLocal<ByteBuffer> LOCAL_WRITE_BUF = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(field_size));
 
     protected String dir;
     protected int id;
@@ -98,14 +97,14 @@ public class WALBucket {
 
 
         buf.position(0);
-        buf.limit(64 * 4);
+        buf.limit(field_size);
         for (int l : item.getDelta()) {
             buf.putInt(l);
         }
         buf.position(0);
         fileChannel.write(buf, dataPosition);
         keyPosition += 12;
-        dataPosition += 64 * 4;
+        dataPosition += field_size;
         Versions versions = index.get(key);
         if (versions == null) {
             versions = new Versions(DEFAULT_SIZE);
@@ -147,12 +146,12 @@ public class WALBucket {
 
     private void addFiled(Integer n, long[] arr) throws IOException {
         randomRead.add(1);
-        totalReadSize.add(64 * 4);
+        totalReadSize.add(field_size);
         long pos = n * 64L * 4;
         // 在文件中
         ByteBuffer readBuf = LOCAL_READ_BUF.get();
         readBuf.position(0);
-        readBuf.limit(64 * 4);
+        readBuf.limit(field_size);
         fileChannel.read(readBuf, pos);
         for (int i = 0; i < 64; i++) {
             arr[i] += readBuf.getInt(i * 4);

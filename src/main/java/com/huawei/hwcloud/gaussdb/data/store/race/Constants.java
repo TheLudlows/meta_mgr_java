@@ -25,4 +25,6 @@ public interface Constants {
      */
     int DEFAULT_SIZE = 4;
 
+    int field_size = 64*8;
+
 }
