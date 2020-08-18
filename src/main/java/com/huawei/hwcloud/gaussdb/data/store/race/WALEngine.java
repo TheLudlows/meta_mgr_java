@@ -89,7 +89,7 @@ public class WALEngine implements DBEngine {
             synchronized (lock){
                 idx=keyBucketMap.getOrDefault(item.getKey(),(byte)-1);
                 if(idx==-1){
-                    idx=BUCKETINDEX.get();
+                    idx=(byte)(BUCKETINDEX.get()%30);
                     keyBucketMap.put(item.getKey(),idx);
                 }
             }
