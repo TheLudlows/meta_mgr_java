@@ -33,7 +33,7 @@ public class WALBucket {
     private int keyPosition;
     private FileChannel fileChannel;
     private FileChannel fileChannelRead;
-        private FileChannel keyChannel;
+    private FileChannel keyChannel;
     private byte[] lock = new byte[0];
     private MappedByteBuffer keyWal;
 

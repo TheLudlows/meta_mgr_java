@@ -1,13 +1,11 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
 import com.carrotsearch.hppc.LongByteHashMap;
-import com.carrotsearch.hppc.LongByteMap;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.BUCKET_SIZE;
@@ -80,6 +78,12 @@ public class WALEngine implements DBEngine {
         });
         backPrint.setDaemon(true);
         backPrint.start();
+        try {
+            System.gc();
+            Thread.sleep(5000);
+        }catch (Exception e) {
+            LOG("err");
+        }
     }
 
     @Override

@@ -1,7 +1,5 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
-import com.carrotsearch.hppc.LongObjectHashMap;
-import com.huawei.hwcloud.gaussdb.data.store.race.utils.BytesUtil;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 
@@ -9,7 +7,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.*;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
@@ -55,7 +52,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
     public void writeDeltaPacket(DeltaPacket deltaPacket) {
         try {
             writeCounter.add(1);
-            long count = deltaPacket.getDeltaCount();
+            short count = deltaPacket.getDeltaCount();
             long v = deltaPacket.getVersion();
             List<DeltaPacket.DeltaItem> list = deltaPacket.getDeltaItem();
             Map<Long,List<DeltaPacket.DeltaItem>> map = new HashMap(2);
@@ -63,7 +60,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
                 long k = list.get(i).getKey();
                 List<DeltaPacket.DeltaItem> exist=map.get(k);
                 if(exist==null){
-                    exist=new ArrayList<>(2);
+                    exist=new ArrayList<>(3);
                     map.put(k,exist);
                 }
                 exist.add(list.get(i));

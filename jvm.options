@@ -1,7 +1,7 @@
 -server
--Xms3800m
--Xmx3800m
--XX:MaxDirectMemorySize=1124m
+-Xms3200m
+-Xmx3200m
+-XX:MaxDirectMemorySize=1800m
 -XX:NewRatio=2
 -XX:+UseAdaptiveSizePolicy
 -XX:-UseBiasedLocking
