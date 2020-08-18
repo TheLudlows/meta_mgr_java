@@ -149,7 +149,7 @@ public class WALBucket {
             writeData(writeBuf, item.getDelta(), exceed,pos);
             versions.add((int) v, pos);
             writeKey(writeBuf, key, v, pos,id);
-            if(versions.size==1||versions.cachePosition!=-1){
+            if((versions.size==1||versions.cachePosition!=-1)&&versions.size<3){
                 versions.cachePosition=CacheService.saveCahe(key,item.getDelta(),exceed,versions.size-1,versions.cachePosition);
             }
         }
@@ -185,23 +185,45 @@ public class WALBucket {
             return data;
         }*/
 
-        if (cache.key != k) {
+        int maxMatchIndex=-1;
+        for (int i = 0; i < versions.size; i++) {
+            int ver = versions.vs[i];
+            if (ver <= v) {
+                maxMatchIndex=i;
+            }
+        }
+        if(maxMatchIndex==-1){
+            return data;
+        }
+
+        if (cache.key != k||cache.maxMatchIndex<maxMatchIndex) {
             cache.key = k;
             cache.buffer.position(0);
+            int skip=0;
             if(versions.cachePosition!=-1){
                 cacheHit.add(1);
                 cache.buffer.limit(page_size);
-                CacheService.getCacheData(k,cache.buffer,versions.cachePosition,versions.size);
-            }else{
-                int size = versions.size * item_size;
+                skip=versions.size>2?2:versions.size;
+                CacheService.getCacheData(k,cache.buffer,versions.cachePosition,skip);
+            }
+            int size = versions.size * item_size;
+            if(maxMatchIndex+1>skip){
                 for (int i = 0; i < versions.off.length; i++) {
                     randomRead.add(1);
                     int limit = (i + 1) * page_size;
                     limit=limit > size ? size : limit;
                     cache.buffer.limit(limit);
-                    fileChannelRead.read(cache.buffer, versions.off[i]);
+                    if(i==0){
+                        fileChannelRead.read(cache.buffer, versions.off[i]+skip*item_size);
+                    }else{
+                        fileChannelRead.read(cache.buffer, versions.off[i]);
+                    }
                 }
+                cache.maxMatchIndex=versions.size-1;
+            }else{
+                cache.maxMatchIndex=maxMatchIndex;
             }
+
         }else{
             cacheHit.add(1);
         }
@@ -218,7 +240,7 @@ public class WALBucket {
                     }else if(n>0){
                         fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MAX_VALUE;
                     }else{
-                        LOG("zore value");
+                        LOG("zore value:"+maxMatchIndex+"/"+versions.size+"/"+i);
                         fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MIN_VALUE;
                     }
                 }
@@ -229,7 +251,7 @@ public class WALBucket {
                     }else if(n>0){
                         fields[j] += n + ((exceed2>>62-(j-32)*2)&0x3)*Integer.MAX_VALUE;
                     }else{
-                        LOG("zore value");
+                        LOG("zore value1:"+maxMatchIndex+"/"+versions.size+"/"+i);
                     }
                 }
             }
