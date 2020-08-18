@@ -10,13 +10,15 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.page_field_nu
 public class Versions {
     protected int[] vs;
     protected int[] off;
-    protected int size;
+    protected byte size;
+    protected int cachePosition;
     //protected long[] filed;
 
     public Versions(int maxSize) {
         this.size = 0;
         vs = new int[maxSize];
         off = new int[1];
+        cachePosition=-1;
     }
 
     public void add(int v, int index) {

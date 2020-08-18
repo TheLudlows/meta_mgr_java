@@ -114,7 +114,7 @@ public class WALBucket {
         }*/
     }
 
-    public void write(long v, DeltaPacket.DeltaItem item) throws IOException {
+    public void write(long v, DeltaPacket.DeltaItem item,byte[] exceed) throws IOException {
         long key = item.getKey();
         ByteBuffer writeBuf = LOCAL_WRITE_BUF.get();
         int pos;
@@ -133,10 +133,10 @@ public class WALBucket {
                 int base = versions.off[versions.size / page_field_num];
                 pos = base + (versions.size % page_field_num) * item_size;
             }
-            writeData(writeBuf, item.getDelta(), item.getExceed(),pos);
+            writeData(writeBuf, item.getDelta(), exceed,pos);
             versions.add((int) v, pos);
             writeKey(writeBuf, key, v, pos,id);
-            CacheService.saveCahe(key,item.getDelta(),item.getExceed(),versions.size-1);
+            versions.cachePosition=CacheService.saveCahe(key,item.getDelta(),exceed,versions.size-1,versions.cachePosition);
         }
         /*if (id < BUCKET_SIZE / cache_per) {
             versions.addField(item.getDelta());
@@ -170,55 +170,22 @@ public class WALBucket {
             return data;
         }*/
 
-        int[][] caches=CacheService.getCacheData(k);
-        if(caches!=null){
-            byte[][] exceeds=CacheService.getCacheExceed(k);
-            for (int i = 0; i < versions.size; i++) {
-                int ver = versions.vs[i];
-                if (ver <= v) {
-                    long exceed1=BytesUtil.byteArrToLong(exceeds[i],0);
-                    long exceed2=BytesUtil.byteArrToLong(exceeds[i],8);
-                    int n;
-                    for (int j = 0; j < 32; j++) {
-                        n=caches[i][j];
-                        if(n<0){
-                            fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MIN_VALUE;
-                        }else if(n>0){
-                            fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MAX_VALUE;
-                        }else{
-                            LOG("zore value");
-                            fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MIN_VALUE;
-                        }
-                    }
-                    for (int j = 32; j < 64; j++) {
-                        n = caches[i][j];
-                        if(n<0){
-                            fields[j] += n + ((exceed2>>62-(j-32)*2)&0x3)*Integer.MIN_VALUE;
-                        }else if(n>0){
-                            fields[j] += n + ((exceed2>>62-(j-32)*2)&0x3)*Integer.MAX_VALUE;
-                        }else{
-                            LOG("zore value");
-                        }
-                    }
-
-
-
-                }
-            }
-            return data;
-        }
-
-
         if (cache.key != k) {
             cache.key = k;
             cache.buffer.position(0);
-            int size = versions.size * item_size;
-            for (int i = 0; i < versions.off.length; i++) {
-                randomRead.add(1);
-                int limit = (i + 1) * page_size;
-                limit=limit > size ? size : limit;
-                cache.buffer.limit(limit);
-                fileChannelRead.read(cache.buffer, versions.off[i]);
+            if(versions.cachePosition!=-1){
+                cacheHit.add(1);
+                cache.buffer.limit(page_size);
+                CacheService.getCacheData(k,cache.buffer,versions.cachePosition,versions.size);
+            }else{
+                int size = versions.size * item_size;
+                for (int i = 0; i < versions.off.length; i++) {
+                    randomRead.add(1);
+                    int limit = (i + 1) * page_size;
+                    limit=limit > size ? size : limit;
+                    cache.buffer.limit(limit);
+                    fileChannelRead.read(cache.buffer, versions.off[i]);
+                }
             }
         }
         for (int i = 0; i < versions.size; i++) {

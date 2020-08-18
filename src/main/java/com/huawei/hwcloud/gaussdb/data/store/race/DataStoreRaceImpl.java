@@ -40,8 +40,8 @@ public class DataStoreRaceImpl implements DataStoreRace {
             LOG("all write:" + writeCounter.sum());
             LOG("all read:" + readCounter.sum());
             LOG(mem());
-            LOG("cache read:" + randomRead.sum());
-            LOG("merge read:" + cacheHit.sum());
+            LOG("random read:" + randomRead.sum());
+            LOG("cache read:" + cacheHit.sum());
             LOG("total read size:" + totalReadSize.sum() / 1024 / 1024 + "M");
 
             dbEngine.print();
@@ -95,8 +95,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
                         }
                     }
                 }
-                first.setExceed(exceed);
-                dbEngine.write(v, first);
+                dbEngine.write(v, first,exceed);
             }
 
         } catch (Throwable e) {

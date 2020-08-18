@@ -83,7 +83,7 @@ public class WALEngine implements DBEngine {
     }
 
     @Override
-    public void write(long v, DeltaPacket.DeltaItem item) throws IOException {
+    public void write(long v, DeltaPacket.DeltaItem item,byte[] exceed) throws IOException {
         Byte idx=keyBucketMap.getOrDefault(item.getKey(),(byte)-1);
         if(idx==-1){
             synchronized (lock){
@@ -94,7 +94,7 @@ public class WALEngine implements DBEngine {
                 }
             }
         }
-        buckets[idx].write(v, item);
+        buckets[idx].write(v, item,exceed);
     }
 
     @Override

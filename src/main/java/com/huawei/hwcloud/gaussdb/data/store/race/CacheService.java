@@ -1,31 +1,24 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
+import com.huawei.hwcloud.gaussdb.data.store.race.utils.BytesUtil;
+
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.CACHE_SIZE;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.page_field_num;
+import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
 
 /**
  * @author chender
  * @date 2020/8/16 20:40
  */
 public class CacheService {
-    private static Map<Long,int[][]>  versionCaches=new ConcurrentHashMap<>(CACHE_SIZE/64/4/page_field_num+1,1);
-    private static Map<Long,byte[][]>  exceedCaches=new ConcurrentHashMap<>(CACHE_SIZE/64/4/page_field_num+1,1);
-    private static AtomicInteger cacheLeft =new AtomicInteger(CACHE_SIZE/64/4/page_field_num);
-    private static boolean full;
-    private static int[][][] initFileds;
-    private static byte[][][] initExceeds;
+    private static ByteBuffer cacheBuffer= ByteBuffer.allocateDirect(cache_capacity);
+    private static AtomicInteger cachePosition=new AtomicInteger(-item_size);
+    private static volatile boolean full;
 
     public static void init(){
-        initFileds=new int[cacheLeft.get()][][];
-        initExceeds=new byte[cacheLeft.get()][][];
-        for(int i=0;i<initFileds.length;i++){
-            initFileds[i]=new int[4][];
-            initExceeds[i]=new byte[4][];
-        }
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
@@ -34,51 +27,30 @@ public class CacheService {
     }
 
 
-    public static boolean saveCahe(long key,int[] fields,byte[] exceed,int index){
-        int left=-1;
-        if(index==0){
-            if(full){
-                return false;
-            }
-            left=cacheLeft.decrementAndGet();
-            if(left<=0){
-                full=true;
-                return false;
-            }
+    public static int saveCahe(long key,int[] fields,byte[] exceed,int index,int position){
+        if(position==-1&&(full||(position=cachePosition.addAndGet(page_size))>=cache_capacity-page_size)){
+            full=true;
+            return -1;
         }
-        int[][] exist = versionCaches.get(key);
-        byte[][] existExceed;
-        if(exist==null){
-            if(index!=0){
-                return false;
-            }
-            synchronized (versionCaches) {
-                exist = versionCaches.get(key);
-                if (exist == null) {
-                    exist = initFileds[left];
-                    existExceed=initExceeds[left];
-                    versionCaches.put(key, exist);
-                    exceedCaches.put(key,existExceed);
-                }else{
-                    existExceed=exceedCaches.get(key);
-                }
-            }
-        }else{
-            existExceed=exceedCaches.get(key);
+        int base=index*item_size+position;
+        for(int i=0;i<64;i++){
+            cacheBuffer.putInt(base+i*4,fields[i]);
         }
-        existExceed[index]=exceed;
-        exist[index]=fields;
-        return true;
+        cacheBuffer.putLong(base+field_size,BytesUtil.byteArrToLong(exceed,0));
+        cacheBuffer.putLong(base+field_size+8,BytesUtil.byteArrToLong(exceed,8));
+        return position;
 
     }
 
-    public static int[][] getCacheData(long key){
-        return versionCaches.get(key);
+    public static void getCacheData(long key,ByteBuffer byteBuffer,int position,int versionSize){
+        for(int j=0;j<versionSize;j++){
+            int base=j*item_size+position;
+            for(int i=0;i<64;i++){
+                byteBuffer.putInt(cacheBuffer.getInt(base+i*4));
+            }
+            byteBuffer.putLong(cacheBuffer.getLong(base+field_size));
+            byteBuffer.putLong(cacheBuffer.getLong(base+field_size+8));
+        }
     }
-
-    public static byte[][] getCacheExceed(long key){
-        return exceedCaches.get(key);
-    }
-
 
 }
