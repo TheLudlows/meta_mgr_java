@@ -149,9 +149,7 @@ public class WALBucket {
             writeData(writeBuf, item.getDelta(), exceed,pos);
             versions.add((int) v, pos);
             writeKey(writeBuf, key, v, pos,id);
-            if((versions.size==1||versions.cachePosition!=-1)&&versions.size<3){
-                versions.cachePosition=CacheService.saveCahe(key,item.getDelta(),exceed,versions.size-1,versions.cachePosition);
-            }
+            CacheService.saveCahe(key,item.getDelta(),exceed,versions.size-1,versions);
         }
         /*if (id < BUCKET_SIZE / cache_per) {
             versions.addField(item.getDelta());
@@ -203,8 +201,8 @@ public class WALBucket {
             if(versions.cachePosition!=-1){
                 cacheHit.add(1);
                 cache.buffer.limit(page_size);
-                skip=versions.size>2?2:versions.size;
-                CacheService.getCacheData(k,cache.buffer,versions.cachePosition,skip);
+                CacheService.getCacheData(k,cache.buffer,versions.cachePosition,versions.size);
+                skip=cache.buffer.position()/item_size;
             }
             int size = versions.size * item_size;
             if(maxMatchIndex+1>skip){

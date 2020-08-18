@@ -14,8 +14,9 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
  * @date 2020/8/16 20:40
  */
 public class CacheService {
-    private static ByteBuffer cacheBuffer= ByteBuffer.allocateDirect(cache_capacity);
+    private static ByteBuffer cacheBuffer= ByteBuffer.allocateDirect(cache_capacity+item_size*2);
     private static AtomicInteger cachePosition=new AtomicInteger(-item_size);
+    private static ConcurrentHashMap<Integer,Versions> positionMap=new ConcurrentHashMap<>(cache_capacity/item_size*2);
     private static volatile boolean full;
 
     public static void init(){
@@ -27,19 +28,31 @@ public class CacheService {
     }
 
 
-    public static int saveCahe(long key,int[] fields,byte[] exceed,int index,int position){
-        if(position==-1&&(full||(position=cachePosition.addAndGet(page_size/2))>=cache_capacity-page_size)){
-            full=true;
-            return -1;
+    public static void saveCahe(long key,int[] fields,byte[] exceed,int index,Versions versions){
+        int position=versions.cachePosition;
+        if(index==0){//新区
+            position=cachePosition.addAndGet(page_size/2)%cache_capacity;
+            Versions pre=positionMap.put(position,versions);//覆盖
+            if(pre!=null){
+                pre.cachePosition=-1;
+            }
+        }else if(position==-1){
+            return;
         }
-        int base=index*item_size+position;
+
+        if(index>=2){
+            Versions pre=positionMap.remove(position+page_size/2);
+            if(pre!=null){
+                pre.cachePosition=-1;
+            }
+        }
+
+        int base=position+index*item_size;
         for(int i=0;i<64;i++){
             cacheBuffer.putInt(base+i*4,fields[i]);
         }
         cacheBuffer.putLong(base+field_size,BytesUtil.byteArrToLong(exceed,0));
         cacheBuffer.putLong(base+field_size+8,BytesUtil.byteArrToLong(exceed,8));
-        return position;
-
     }
 
     public static void getCacheData(long key,ByteBuffer byteBuffer,int position,int versionSize){
