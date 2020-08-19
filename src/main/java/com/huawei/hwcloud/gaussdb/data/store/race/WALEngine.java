@@ -105,7 +105,7 @@ public class WALEngine implements DBEngine {
     }
 
     @Override
-    public Data read(long key, long v) throws IOException {
+    public synchronized Data read(long key, long v) throws IOException {
         Byte idx=keyBucketMap.get(key);
         if(idx==null){
             return null;

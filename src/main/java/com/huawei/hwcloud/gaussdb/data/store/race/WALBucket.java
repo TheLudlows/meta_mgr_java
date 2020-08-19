@@ -195,18 +195,31 @@ public class WALBucket {
         if(maxMatchIndex==-1){
             return data;
         }
-
+        int versionSize=versions.size;
         if (cache.key != k||cache.maxMatchIndex<maxMatchIndex) {
             cache.key = k;
             cache.buffer.position(0);
             int skip=0;
-            if(versions.cachePosition!=-1){
+            int vcPosition=versions.cachePosition;
+            if(vcPosition!=-1){
                 cacheHit.add(1);
                 cache.buffer.limit(page_size);
-                skip=versions.size>2?2:versions.size;
-                CacheService.getCacheData(k,cache.buffer,versions.cachePosition,skip);
+                boolean match;
+                if(versionSize<=2){
+                    match=CacheService.getCacheData(cache.buffer,vcPosition,versionSize);
+                }else{
+                    match=CacheService.getCacheData(k,vcPosition,versionSize,cache.buffer);
+                }
+                if(!match){
+                    cache.buffer.position(0);
+                    versions.cachePosition=-1;
+                    skip=0;
+                }else{
+                    skip=cache.buffer.position()/item_size;
+                }
             }
-            int size = versions.size * item_size;
+
+            int size =versionSize * item_size;
             if(maxMatchIndex+1>skip){
                 for (int i = 0; i < versions.off.length; i++) {
                     randomRead.add(1);
@@ -219,9 +232,13 @@ public class WALBucket {
                         fileChannelRead.read(cache.buffer, versions.off[i]);
                     }
                 }
+                if(skip!=0){
+                    cache.buffer.position(item_size*skip);
+                    CacheService.mergeCache(k,vcPosition,skip,versionSize-skip,cache.buffer);
+                }
                 cache.maxMatchIndex=versions.size-1;
             }else{
-                cache.maxMatchIndex=maxMatchIndex;
+                cache.maxMatchIndex=skip-1;
             }
 
         }else{
