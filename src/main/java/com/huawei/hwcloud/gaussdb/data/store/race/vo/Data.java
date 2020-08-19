@@ -29,4 +29,13 @@ public class Data implements Serializable {
             field[i] = 0;
         }
     }
+
+    @Override
+    public String toString() {
+        return "Data{" +
+                "key=" + key +
+                ", version=" + version +
+                ", field=" + Arrays.toString(field) +
+                '}';
+    }
 }

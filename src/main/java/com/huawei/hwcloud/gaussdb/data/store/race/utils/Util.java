@@ -1,8 +1,5 @@
 package com.huawei.hwcloud.gaussdb.data.store.race.utils;
 
-import com.sun.management.OperatingSystemMXBean;
-
-import java.lang.management.ManagementFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.BUCKET_SIZE;
@@ -17,8 +14,6 @@ public class Util {
     public static final int index(long key) {
         return Math.abs(Long.hashCode(key)) % BUCKET_SIZE;
     }
-
-    private static final OperatingSystemMXBean osmxb = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
 
     public static String mem() {
         long max = run.maxMemory() / 1024 / 1024;
@@ -43,17 +38,5 @@ public class Util {
         }
     }
 
-    public static int cpuLoad() {
-        double cpuLoad = osmxb.getSystemCpuLoad();
-        int percentCpuLoad = (int) (cpuLoad * 100);
-        return percentCpuLoad;
-    }
-
-    public static void main(String[] args) throws InterruptedException {
-        for (int i = 0; i < 10; i++) {
-            Thread.sleep(100);
-            System.out.println(cpuLoad());
-        }
-    }
 
 }

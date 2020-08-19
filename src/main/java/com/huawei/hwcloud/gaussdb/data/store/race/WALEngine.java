@@ -1,10 +1,12 @@
 package com.huawei.hwcloud.gaussdb.data.store.race;
 
+import com.carrotsearch.hppc.LongByteHashMap;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.Data;
 import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.BUCKET_SIZE;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.MONITOR_TIME;
@@ -16,10 +18,14 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.*;
  * fields :wal -> channel write
  */
 public class WALEngine implements DBEngine {
+    public static final LongByteHashMap keyBucketMap = new LongByteHashMap(4600001, 0.99);
     private String dir;
     private WALBucket buckets[];
     // 数据监控线程
     private Thread backPrint;
+    private AtomicInteger bIndex = new AtomicInteger(-1);
+    private ThreadLocal<Byte> BUCKETINDEX = ThreadLocal.withInitial(() -> (byte) bIndex.incrementAndGet());
+    private byte[] lock = new byte[0];
 
     public WALEngine(String dir) {
         this.dir = dir + "/";
@@ -41,24 +47,27 @@ public class WALEngine implements DBEngine {
             try {
                 long lastWrite = 0;
                 long lastRead = 0;
-                long lastMergeRead = 0;
+                long lastHitCache = 0;
                 long lastRandomRead = 0;
                 long lastReadSize = 0;
                 while (true) {
                     long read = readCounter.sum();
                     long write = writeCounter.sum();
-                    long mr = mergeRead.sum();
+                    long hit = cacheHit.sum();
                     long rr = randomRead.sum();
                     long rs = totalReadSize.sum();
+                    int indexSize=0;
+                    for(WALBucket bucket:buckets){
+                        indexSize+=bucket.index.size();
+                    }
                     LOG("[LAST" + MONITOR_TIME + "ms],[Read " + (read - lastRead) + "],[Write " + (write - lastWrite)
-                            + "],[MergeRead " + (mr - lastMergeRead) + "],[RandomRead " + (rr - lastRandomRead) + "],[ReadSize "
-                            + ((rs - lastReadSize) / 1024 / 1024) + "M]" + ",[CPU " + cpuLoad() + "]"
+                            + "],[hit " + (hit - lastHitCache) + "],[RandomRead " + (rr - lastRandomRead) + "],[ReadSize "
+                            + ((rs - lastReadSize) / 1024 / 1024) + "M],[totalIndex "+indexSize+"]"
                     );
-
                     LOG(mem());
                     lastRead = read;
                     lastWrite = write;
-                    lastMergeRead = mr;
+                    lastHitCache = hit;
                     lastRandomRead = rr;
                     lastReadSize = rs;
                     Thread.sleep(MONITOR_TIME);
@@ -72,8 +81,18 @@ public class WALEngine implements DBEngine {
     }
 
     @Override
-    public void write(long v, DeltaPacket.DeltaItem item) throws IOException {
-        buckets[index(item.getKey())].write(v, item);
+    public void write(long v, DeltaPacket.DeltaItem item, byte[] exceed) throws IOException {
+        Byte idx = keyBucketMap.getOrDefault(item.getKey(), (byte) -1);
+        if (idx == -1) {
+            synchronized (lock) {
+                idx = keyBucketMap.getOrDefault(item.getKey(), (byte) -1);
+                if (idx == -1) {
+                    idx = (byte) (BUCKETINDEX.get() % 30);
+                    keyBucketMap.put(item.getKey(), idx);
+                }
+            }
+        }
+        buckets[idx].write(v, item, exceed);
     }
 
     @Override
@@ -85,7 +104,11 @@ public class WALEngine implements DBEngine {
 
     @Override
     public Data read(long key, long v) throws IOException {
-        return buckets[index(key)].read(key, v);
+        Byte idx = keyBucketMap.get(key);
+        if (idx == null) {
+            return null;
+        }
+        return buckets[idx].read(key, v);
     }
 
     @Override
