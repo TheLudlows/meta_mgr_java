@@ -202,7 +202,12 @@ public class WALBucket {
                 cacheHit.add(1);
                 cache.buffer.limit(page_size);
                 CacheService.getCacheData(k,cache.buffer,versions.cachePosition,versions.size);
-                skip=cache.buffer.position()/item_size;
+                if(versions.cachePosition!=-1){
+                    skip=cache.buffer.position()/item_size;
+                }else{//缓存在读的过程中被覆盖
+                    skip=0;
+                    cache.buffer.position(0);
+                }
             }
             int size = versions.size * item_size;
             if(maxMatchIndex+1>skip){

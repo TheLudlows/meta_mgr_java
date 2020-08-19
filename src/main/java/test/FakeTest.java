@@ -28,8 +28,8 @@ public class FakeTest {
         store.init("data");
         long start = System.currentTimeMillis();
 
-        List<Set<DeltaPacket>> datas = buildPacket(thread_n,4,0,thread_n*n);
-        List<Set<DeltaPacket>> datas2 = buildPacket(thread_n/2,4,thread_n*n,thread_n*n*2);
+        List<Set<DeltaPacket>> datas = buildPacket(thread_n,0,1,0,thread_n*n);
+        List<Set<DeltaPacket>> datas2 = buildPacket(thread_n/2,2,3,0,thread_n*n);
 
         System.out.println("prepare data cost:"+(System.currentTimeMillis()-start));
         Thread.sleep(2000);
@@ -52,7 +52,7 @@ public class FakeTest {
         for (int i = 0; i < thread_n; i++) {//读
             int x = i;
             futures.add(CompletableFuture.supplyAsync(()->{
-                read(store, x * n, (x + 1) * n);
+                read(store, x * n, (x + 1) * n,0,1);
                 return null;
             },executorService));
         }
@@ -68,7 +68,7 @@ public class FakeTest {
         for (int i = 0; i < thread_n/2; i++) {//读之前的
             int x = i;
             futures.add(CompletableFuture.supplyAsync(()->{
-                read(store, x * n, (x + 1) * n);
+                read(store, x * n, (x + 1) * n,0,1);
                 return null;
             },executorService));
         }
@@ -86,7 +86,7 @@ public class FakeTest {
         for (int i =thread_n/2; i < thread_n; i++) {//读新的
             int x = i;
             futures.add(CompletableFuture.supplyAsync(()->{
-                read(store, thread_n*n+x * n*2, thread_n*n+(x + 1) * n*2);
+                read(store, x * n, (x + 1) * n,0,3);
                 return null;
             },executorService));
         }
@@ -97,9 +97,9 @@ public class FakeTest {
         store.deInit();
     }
 
-    private static void read(DataStoreRace store, int ks, int ke) {
+    private static void read(DataStoreRace store, int ks, int ke,int vs,int ve) {
         for (int i = ks; i < ke; i++) {
-            for(int j=3;j>=3;j--){
+            for(int j=vs;j<=ve;j++){
                 Data data = store.readDataByVersion(Integer.MIN_VALUE+i, /*ThreadLocalRandom.current().nextInt(9999)*/j);
                 if (data != null) {
                     if (data.getField()[0] != (Integer.MIN_VALUE+i) *2L* (j+1)) {
@@ -126,13 +126,13 @@ public class FakeTest {
         }
     }
 
-    private static List<Set<DeltaPacket>> buildPacket(int batchSize, int versions, int ks,int ke){
+    private static List<Set<DeltaPacket>> buildPacket(int batchSize,int versionStart, int versionEnd, int ks,int ke){
         List<Set<DeltaPacket>> result=new ArrayList<>();
         for(int i=0;i<batchSize;i++){
             result.add(new HashSet<>());
         }
         for (int i = ks; i < ke; i++) {
-            for (int j = 0; j < versions; j++) {
+            for (int j = versionStart; j <= versionEnd; j++) {
                 DeltaPacket deltaPacket = new DeltaPacket();
                 deltaPacket.setDeltaItem(new ArrayList<>(1));
                 deltaPacket.setDeltaCount((short)2);

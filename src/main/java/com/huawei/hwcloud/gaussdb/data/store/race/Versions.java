@@ -11,7 +11,7 @@ public class Versions {
     protected int[] vs;
     protected int[] off;
     protected byte size;
-    protected int cachePosition;
+    protected volatile int cachePosition;
     //protected long[] filed;
 
     public Versions(int maxSize) {

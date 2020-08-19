@@ -15,7 +15,7 @@ import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
  */
 public class CacheService {
     private static ByteBuffer cacheBuffer= ByteBuffer.allocateDirect(cache_capacity+item_size*2);
-    private static AtomicInteger cachePosition=new AtomicInteger(-item_size);
+    private static AtomicInteger cachePosition=new AtomicInteger(-page_size/2);
     private static ConcurrentHashMap<Integer,Versions> positionMap=new ConcurrentHashMap<>(cache_capacity/item_size*2);
     private static volatile boolean full;
 
@@ -31,19 +31,28 @@ public class CacheService {
     public static void saveCahe(long key,int[] fields,byte[] exceed,int index,Versions versions){
         int position=versions.cachePosition;
         if(index==0){//新区
-            position=cachePosition.addAndGet(page_size/2)%cache_capacity;
-            Versions pre=positionMap.put(position,versions);//覆盖
-            if(pre!=null){
-                pre.cachePosition=-1;
+            if((position=cachePosition.addAndGet(page_size/2))>cache_capacity-page_size/2){//已满
+                return;
+            }else{
+                versions.cachePosition=position;
+                positionMap.put(position,versions);
             }
+//            Versions pre=positionMap.put(position,versions);//覆盖
+//            if(pre!=null){
+//                pre.cachePosition=-1;
+//            }
         }else if(position==-1){
             return;
         }
 
         if(index>=2){
-            Versions pre=positionMap.remove(position+page_size/2);
-            if(pre!=null){
-                pre.cachePosition=-1;
+            if(position%page_size==0){
+                Versions pre=positionMap.remove(position+page_size/2);
+                if(pre!=null){
+                    pre.cachePosition=-1;
+                }
+            }else{
+                return;
             }
         }
 
