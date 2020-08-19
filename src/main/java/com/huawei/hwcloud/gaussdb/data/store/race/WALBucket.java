@@ -13,8 +13,8 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.cacheHit;
-import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.randomRead;
+//import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.cacheHit;
+//import static com.huawei.hwcloud.gaussdb.data.store.race.Counter.randomRead;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG;
 import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
 import static java.nio.file.StandardOpenOption.*;
@@ -202,7 +202,7 @@ public class WALBucket {
             int skip=0;
             int vcPosition=versions.cachePosition;
             if(vcPosition!=-1){
-                cacheHit.add(1);
+//                cacheHit.add(1);
                 cache.buffer.limit(page_size);
                 boolean match;
                 if(versionSize<=2){
@@ -222,7 +222,7 @@ public class WALBucket {
             int size =versionSize * item_size;
             if(maxMatchIndex+1>skip){
                 for (int i = 0; i < versions.off.length; i++) {
-                    randomRead.add(1);
+//                    randomRead.add(1);
                     int limit = (i + 1) * page_size;
                     limit=limit > size ? size : limit;
                     cache.buffer.limit(limit);
@@ -242,7 +242,7 @@ public class WALBucket {
             }
 
         }else{
-            cacheHit.add(1);
+//            cacheHit.add(1);
         }
         for (int i = 0; i < versions.size; i++) {
             int ver = versions.vs[i];
@@ -257,7 +257,7 @@ public class WALBucket {
                     }else if(n>0){
                         fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MAX_VALUE;
                     }else{
-                        LOG("zore value:"+maxMatchIndex+"/"+versions.size+"/"+i);
+//                        LOG("zore value:"+maxMatchIndex+"/"+versions.size+"/"+i);
                         fields[j] += n+((exceed1>>62-j*2)&0x3)*Integer.MIN_VALUE;
                     }
                 }
@@ -268,7 +268,7 @@ public class WALBucket {
                     }else if(n>0){
                         fields[j] += n + ((exceed2>>62-(j-32)*2)&0x3)*Integer.MAX_VALUE;
                     }else{
-                        LOG("zore value1:"+maxMatchIndex+"/"+versions.size+"/"+i);
+//                        LOG("zore value1:"+maxMatchIndex+"/"+versions.size+"/"+i);
                     }
                 }
             }

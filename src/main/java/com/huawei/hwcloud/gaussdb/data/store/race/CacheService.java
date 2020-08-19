@@ -19,8 +19,9 @@ public class CacheService {
     private static volatile boolean full;
 
     public static void init(){
+        System.gc();
         try {
-            Thread.sleep(1000);
+            Thread.sleep(5000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

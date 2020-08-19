@@ -43,45 +43,43 @@ public class WALEngine implements DBEngine {
         for (int i = 0; i < BUCKET_SIZE; i++) {
             buckets[i] = new WALBucket(dir + i, i);
         }
-        System.gc();
-        System.out.println(5000);
         // 后台监控线程
-        backPrint = new Thread(() ->
-        {
-            try {
-                long lastWrite = 0;
-                long lastRead = 0;
-                long lastHitCache = 0;
-                long lastRandomRead = 0;
-                long lastReadSize = 0;
-                while (true) {
-                    long read = readCounter.sum();
-                    long write = writeCounter.sum();
-                    long hit = cacheHit.sum();
-                    long rr = randomRead.sum();
-                    long rs = totalReadSize.sum();
-                    int indexSize=0;
-                    for(WALBucket bucket:buckets){
-                        indexSize+=bucket.index.size();
-                    }
-                    LOG("[LAST" + MONITOR_TIME + "ms],[Read " + (read - lastRead) + "],[Write " + (write - lastWrite)
-                            + "],[hit " + (hit - lastHitCache) + "],[RandomRead " + (rr - lastRandomRead) + "],[ReadSize "
-                            + ((rs - lastReadSize) / 1024 / 1024) + "M],[totalIndex "+indexSize+"]"
-                    );
-                    LOG(mem());
-                    lastRead = read;
-                    lastWrite = write;
-                    lastHitCache = hit;
-                    lastRandomRead = rr;
-                    lastReadSize = rs;
-                    Thread.sleep(MONITOR_TIME);
-                }
-            } catch (InterruptedException e) {
-                LOG_ERR("err", e);
-            }
-        });
-        backPrint.setDaemon(true);
-        backPrint.start();
+//        backPrint = new Thread(() ->
+//        {
+//            try {
+//                long lastWrite = 0;
+//                long lastRead = 0;
+//                long lastHitCache = 0;
+//                long lastRandomRead = 0;
+//                long lastReadSize = 0;
+//                while (true) {
+//                    long read = readCounter.sum();
+//                    long write = writeCounter.sum();
+//                    long hit = cacheHit.sum();
+//                    long rr = randomRead.sum();
+//                    long rs = totalReadSize.sum();
+//                    int indexSize=0;
+//                    for(WALBucket bucket:buckets){
+//                        indexSize+=bucket.index.size();
+//                    }
+//                    LOG("[LAST" + MONITOR_TIME + "ms],[Read " + (read - lastRead) + "],[Write " + (write - lastWrite)
+//                            + "],[hit " + (hit - lastHitCache) + "],[RandomRead " + (rr - lastRandomRead) + "],[ReadSize "
+//                            + ((rs - lastReadSize) / 1024 / 1024) + "M],[totalIndex "+indexSize+"]"
+//                    );
+//                    LOG(mem());
+//                    lastRead = read;
+//                    lastWrite = write;
+//                    lastHitCache = hit;
+//                    lastRandomRead = rr;
+//                    lastReadSize = rs;
+//                    Thread.sleep(MONITOR_TIME);
+//                }
+//            } catch (InterruptedException e) {
+//                LOG_ERR("err", e);
+//            }
+//        });
+//        backPrint.setDaemon(true);
+//        backPrint.start();
     }
 
     @Override

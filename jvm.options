@@ -1,6 +1,6 @@
 -server
--Xms3230m
--Xmx3230m
+-Xms3220m
+-Xmx3220m
 -XX:MaxDirectMemorySize=1800m
 -XX:NewRatio=2
 -XX:+UseAdaptiveSizePolicy

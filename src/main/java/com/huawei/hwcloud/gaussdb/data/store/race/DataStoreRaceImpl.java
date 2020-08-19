@@ -37,12 +37,12 @@ public class DataStoreRaceImpl implements DataStoreRace {
     @Override
     public void deInit() {
         try {
-            LOG("all write:" + writeCounter.sum());
-            LOG("all read:" + readCounter.sum());
-            LOG(mem());
-            LOG("random read:" + randomRead.sum());
-            LOG("cache read:" + cacheHit.sum());
-            LOG("total read size:" + totalReadSize.sum() / 1024 / 1024 + "M");
+//            LOG("all write:" + writeCounter.sum());
+//            LOG("all read:" + readCounter.sum());
+//            LOG(mem());
+//            LOG("random read:" + randomRead.sum());
+//            LOG("cache read:" + cacheHit.sum());
+//            LOG("total read size:" + totalReadSize.sum() / 1024 / 1024 + "M");
 
             dbEngine.print();
             dbEngine.close();
@@ -54,7 +54,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
     @Override
     public void writeDeltaPacket(DeltaPacket deltaPacket) {
         try {
-            writeCounter.add(1);
+//            writeCounter.add(1);
             long count = deltaPacket.getDeltaCount();
             long v = deltaPacket.getVersion();
             List<DeltaPacket.DeltaItem> list = deltaPacket.getDeltaItem();
@@ -63,7 +63,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
                 long k = list.get(i).getKey();
                 List<DeltaPacket.DeltaItem> exist=map.get(k);
                 if(exist==null){
-                    exist=new ArrayList<>(2);
+                    exist=new ArrayList<>(3);
                     map.put(k,exist);
                 }
                 exist.add(list.get(i));
@@ -107,7 +107,7 @@ public class DataStoreRaceImpl implements DataStoreRace {
     @Override
     public Data readDataByVersion(long key, long version) {
         try {
-            readCounter.add(1);
+//            readCounter.add(1);
             Data data = dbEngine.read(key, version);
             return data;
         } catch (Throwable e) {
