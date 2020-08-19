@@ -43,6 +43,8 @@ public class WALEngine implements DBEngine {
         for (int i = 0; i < BUCKET_SIZE; i++) {
             buckets[i] = new WALBucket(dir + i, i);
         }
+        System.gc();
+        System.out.println(5000);
         // 后台监控线程
         backPrint = new Thread(() ->
         {
@@ -105,7 +107,7 @@ public class WALEngine implements DBEngine {
     }
 
     @Override
-    public synchronized Data read(long key, long v) throws IOException {
+    public Data read(long key, long v) throws IOException {
         Byte idx=keyBucketMap.get(key);
         if(idx==null){
             return null;

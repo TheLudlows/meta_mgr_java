@@ -27,7 +27,7 @@ public interface Constants {
      */
     int cache_per = 3;
 
-    int cache_capacity=1024*1024*1024/15;
+    int cache_capacity=1024*1024*1750;
 
     int key_wal_size=128*1024+4;
 }
