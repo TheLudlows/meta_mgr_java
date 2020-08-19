@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.item_size;
 
 public class VersionCache {
-    static final int max_cache_size =item_size*8;
+    static final int max_cache_size = item_size * 8;
     int maxMatchIndex;
     long key;
     ByteBuffer buffer;

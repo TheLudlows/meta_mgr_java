@@ -8,11 +8,5 @@ zip -r meta_mgr_java.zip src pom.xml jvm.options
 
 ```
 
-#### TODO
-
-- dio 写
-- bucket cache
-- thread cache
-- 1kb page
-- merge write 
-- 缓存命中率高的话，可以尝试顺序写
+#### 最终成绩
+- 85.4

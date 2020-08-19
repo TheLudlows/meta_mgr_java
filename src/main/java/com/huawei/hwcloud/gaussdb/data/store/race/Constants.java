@@ -15,19 +15,14 @@ public interface Constants {
 
     int page_field_num = 4;
 
-    int field_size=64 * 4;
-    int exceed_size=16;
+    int field_size = 64 * 4;
+    int exceed_size = 16;
 
-    int item_size=field_size+exceed_size;
+    int item_size = field_size + exceed_size;
 
     int page_size = item_size * page_field_num;
 
-    /**
-     * 缓存比例
-     */
-    int cache_per = 3;
+    int cache_capacity = 1024 * 1024 * 1750;
 
-    int cache_capacity=1024*1024*1750;
-
-    int key_wal_size=128*1024+4;
+    int key_wal_size = 128 * 1024 + 4;
 }

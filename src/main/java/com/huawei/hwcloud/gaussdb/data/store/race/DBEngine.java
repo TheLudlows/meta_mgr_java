@@ -21,7 +21,7 @@ public interface DBEngine {
 
     void init();
 
-    void write(long v, DeltaPacket.DeltaItem item,byte[] exceed) throws IOException;
+    void write(long v, DeltaPacket.DeltaItem item, byte[] exceed) throws IOException;
 
     void print();
 
