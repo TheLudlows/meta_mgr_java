@@ -7,7 +7,6 @@ import com.huawei.hwcloud.gaussdb.data.store.race.vo.DeltaPacket;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -69,14 +68,6 @@ public class WALBucket {
     private void tryRecover() throws IOException {
         if (keyPosition == 0) {
             keyPosition = 4;
-            // 预分配，效果一般
-            /*ByteBuffer buf = LOCAL_WRITE_BUF.get();
-            for (int i = 0; i < 400*1024; i++) {
-                buf.position(0);
-                fileChannel.write(buf, dataPosition);
-                dataPosition += 64 * 8;
-            }
-            dataPosition = 0;*/
             return;
         }
         int keyLength=(int)keyChannel.size();
@@ -91,21 +82,12 @@ public class WALBucket {
             }
         }
 
-
-//        fileChannel.read(dataBuf, 0);
-//        keyChannel.read(keyBuf, 0);
-
-
-
         for (int i = 4; i < keyPosition; i += 16) {
             long k = keyWal.getLong(i);
             int v = keyWal.getInt(i + 8);
             int off = keyWal.getInt(i + 12);
             buildIndex(k, v, off,(byte)id);
         }
-//        while (keyBuf.hasRemaining()) {
-//
-//        }
     }
 
     private void buildIndex(long k, int v, int off,byte bucketIndex) {
@@ -117,14 +99,6 @@ public class WALBucket {
             WALEngine.keyBucketMap.put(k,bucketIndex);
         }
         versions.add(v, off);
-//        long[] field = new long[64];
-//        for (int i = 0; i < 64; i++) {
-//            field[i] = dataBuf.getLong(off + i * 8);
-//        }
-        //cache
-       /* if (id < BUCKET_SIZE / cache_per) {
-            versions.addField(field);
-        }*/
     }
 
     public void write(long v, DeltaPacket.DeltaItem item,byte[] exceed) throws IOException {
@@ -148,26 +122,13 @@ public class WALBucket {
             }
             writeData(writeBuf, item.getDelta(), exceed,pos);
             versions.add((int) v, pos);
-            writeKey(writeBuf, key, v, pos,id);
+            writeKey(key, v, pos);
             if((versions.size==1||versions.cachePosition!=-1)&&versions.size<3){
-                versions.cachePosition=CacheService.saveCahe(key,item.getDelta(),exceed,versions.size-1,versions.cachePosition);
+                versions.cachePosition=CacheService.saveCache(item.getDelta(),exceed,versions.size-1,versions.cachePosition);
             }
         }
-        /*if (id < BUCKET_SIZE / cache_per) {
-            versions.addField(item.getDelta());
-        }*/
     }
 
-    /**
-     * for (int i = 0; i < size; i++) {
-     * long ver = versions.vs[i];
-     * if (ver <= v) {
-     * int off = versions.off[i / 8] + (i % 8) * 64 * 8;
-     * addFiled(off, fields);
-     * //System.out.println(Arrays.toString(fields));
-     * }
-     * }
-     */
     public Data read(long k, long v) throws IOException {
         Versions versions = index.get(k);
         if (versions == null) {
@@ -180,11 +141,6 @@ public class WALBucket {
         data.setVersion(v);
         long[] fields = data.getField();
         // use cache
-        /*if (versions.queryFunc(v) == 0) {
-            System.arraycopy(versions.filed, 0, fields, 0, 64);
-            return data;
-        }*/
-
         int maxMatchIndex=-1;
         for (int i = 0; i < versions.size; i++) {
             int ver = versions.vs[i];
@@ -263,14 +219,7 @@ public class WALBucket {
         LOG(dir + " dataPosition:" + dataPosition + " keyPosition:" + keyPosition + " index size:" + index.size());
     }
 
-    private void writeKey(ByteBuffer writeBuf, long key, long v, int off,int bucketIndex) throws IOException {
-//        writeBuf.position(0);
-//        writeBuf.putLong(key);
-//        writeBuf.putInt((int) v);
-//        writeBuf.putInt(off);
-//        writeBuf.limit(16);
-//        writeBuf.position(0);
-//        keyChannel.write(writeBuf, keyPosition);
+    private void writeKey(long key, long v, int off) throws IOException {
         keyWal.putLong(keyPosition, key);
         keyWal.putInt(keyPosition + 8, (int) v);
         keyWal.putInt(keyPosition + 12, off);

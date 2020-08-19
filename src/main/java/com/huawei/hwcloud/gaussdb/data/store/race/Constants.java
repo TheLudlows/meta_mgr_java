@@ -22,12 +22,7 @@ public interface Constants {
 
     int page_size = item_size * page_field_num;
 
-    /**
-     * 缓存比例
-     */
-    int cache_per = 3;
-
-    int cache_capacity=1024*1024*(1024 + 700);
+    int cache_capacity=1024*1024*(1024 + 750);
 
     int key_wal_size=128*1024+4;
 }

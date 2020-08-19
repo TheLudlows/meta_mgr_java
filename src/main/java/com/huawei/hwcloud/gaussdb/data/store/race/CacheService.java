@@ -3,8 +3,6 @@ package com.huawei.hwcloud.gaussdb.data.store.race;
 import com.huawei.hwcloud.gaussdb.data.store.race.utils.BytesUtil;
 
 import java.nio.ByteBuffer;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
@@ -27,7 +25,7 @@ public class CacheService {
     }
 
 
-    public static int saveCahe(long key,int[] fields,byte[] exceed,int index,int position){
+    public static int saveCache(int[] fields,byte[] exceed,int index,int position){
         if(position==-1&&(full||(position=cachePosition.addAndGet(page_size/2))>=cache_capacity-page_size)){
             full=true;
             return -1;

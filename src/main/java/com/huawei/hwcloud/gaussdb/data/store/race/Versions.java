@@ -52,41 +52,6 @@ public class Versions {
                 '}';
     }
 
-  /* public void addField(long[] l) {
-        if (filed == null) {
-            filed = new long[64];
-        }
-        for (int i = 0; i < 64; i++) {
-            filed[i] += l[i];
-        }
-    }*/
-
-
-/*    public int queryFunc(long version) {
-        int match = 0;
-        for (int i = 0; i < size; i++) {
-            if (version >= vs[i]) {
-                match++;
-            }
-        }
-        if(match == size && filed != null) {
-            return 0;
-        }else {
-            return 1;
-        }
-    }*/
-
-    public int lastLarge(long l) {
-        int to = this.size - 1;
-        while (0 <= to) {
-            if (vs[to] <= l) {
-                return to;
-            }
-            to--;
-        }
-        return 0;
-    }
-
     public static void main(String[] args) {
         Versions v = new Versions(3);
         for (int i = 0; i < 20; i++) {
