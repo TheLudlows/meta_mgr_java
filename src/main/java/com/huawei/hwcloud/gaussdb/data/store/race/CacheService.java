@@ -8,13 +8,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.huawei.hwcloud.gaussdb.data.store.race.Constants.*;
+import static com.huawei.hwcloud.gaussdb.data.store.race.utils.Util.LOG_ERR;
 
 /**
  * @author chender
  * @date 2020/8/16 20:40
  */
 public class CacheService {
-    private static ByteBuffer cacheBuffer= ByteBuffer.allocateDirect(cache_capacity+item_size*2);
+    private static ByteBuffer cacheBuffer= ByteBuffer.allocateDirect(cache_capacity+page_size/2);
     private static AtomicInteger cachePosition=new AtomicInteger(-page_size/2);
     private static ConcurrentHashMap<Integer,Versions> positionMap=new ConcurrentHashMap<>(cache_capacity/item_size*2);
     private static volatile boolean full;
@@ -31,7 +32,12 @@ public class CacheService {
     public static void saveCahe(long key,int[] fields,byte[] exceed,int index,Versions versions){
         int position=versions.cachePosition;
         if(index==0){//新区
-            if((position=cachePosition.addAndGet(page_size/2))>cache_capacity-page_size/2){//已满
+            if(full){
+                return;
+            }
+            position=cachePosition.addAndGet(page_size/2);
+            if(position>=cache_capacity-page_size/2||position<0){//已满
+                full=true;
                 return;
             }else{
                 versions.cachePosition=position;
@@ -57,8 +63,13 @@ public class CacheService {
         }
 
         int base=position+index*item_size;
-        for(int i=0;i<64;i++){
-            cacheBuffer.putInt(base+i*4,fields[i]);
+        try {
+            for(int i=0;i<64;i++){
+                cacheBuffer.putInt(base+i*4,fields[i]);
+            }
+        }catch (Exception e){
+            LOG_ERR("base="+base+",index="+index+",position="+position+",versionSize="+versions.size,e);
+            throw e;
         }
         cacheBuffer.putLong(base+field_size,BytesUtil.byteArrToLong(exceed,0));
         cacheBuffer.putLong(base+field_size+8,BytesUtil.byteArrToLong(exceed,8));

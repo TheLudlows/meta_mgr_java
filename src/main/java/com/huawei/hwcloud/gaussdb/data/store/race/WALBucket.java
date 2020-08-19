@@ -224,7 +224,7 @@ public class WALBucket {
                 }
                 cache.maxMatchIndex=versions.size-1;
             }else{
-                cache.maxMatchIndex=maxMatchIndex;
+                cache.maxMatchIndex=skip-1;
             }
 
         }else{

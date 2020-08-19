@@ -82,15 +82,17 @@ public class FakeTest {
         }
         start();
 
-        futures=new ArrayList<>(thread_n/2);
-        for (int i =thread_n/2; i < thread_n; i++) {//读新的
-            int x = i;
-            futures.add(CompletableFuture.supplyAsync(()->{
-                read(store, x * n, (x + 1) * n,0,3);
-                return null;
-            },executorService));
+        for(int c=0;c<2;c++){
+            futures=new ArrayList<>(thread_n/2);
+            for (int i =thread_n/2; i < thread_n; i++) {//读新的
+                int x = i;
+                futures.add(CompletableFuture.supplyAsync(()->{
+                    read(store, x * n, (x + 1) * n,0,3);
+                    return null;
+                },executorService));
+            }
+            start();
         }
-        start();
         System.out.println("mix cost: " + (System.currentTimeMillis() - start) );
 
         executorService.shutdown();
