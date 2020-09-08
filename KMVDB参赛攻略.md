@@ -16,7 +16,7 @@
 
 ##### 2.2 存储结构&索引结构
 
-为了让读取尽量能够在一次IO中完成，我们采用了随机写delta的方式，尽量将相同的key紧凑的存放置一个page中，page的大小固定，如果一个key的delta超过了page的阈值，则顺序开辟一个page存放此key，一个page中只会存放一个key的delta。
+为了让读取尽量能够在一次IO中完成，我们采用了随机写delta的方式，尽量将相同的key紧凑的存放置一个page中，page的大小固定，如果一个key的delta超过了page的阈值，则顺序开辟一个page存放此key的delta，一个page中只会存放一个key的delta。
 
 key和version采用顺序追加写，同时每个key/version后面追加一个delta的偏移坐标。一个分区Bucket的结构如下图所示：
 
