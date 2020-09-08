@@ -2,7 +2,7 @@
 
 #### 1. 赛题分析
 
-本次比赛需实现一个多版本的kv数据库引擎，写入为随机写，查询功能为`MinV～NV`的的累加结果，同时需支持进程奔溃级的故障恢复。
+本次比赛需实现一个多版本的KV数据库引擎，写入为随机写，查询功能为`MinV～NV`的的累加结果，同时需支持进程奔溃级的故障恢复。
 
 本赛题的读写比例为7:1，需寻找合适的数据组织方式来最小化写入和查询IO的总耗时。
 
@@ -10,13 +10,13 @@
 
 ##### 2.1 分区策略
 
-评测程序是30/15个线程并发的发送数据，读写同时在进行。由于key可能在多个线程中出现，为了减少读的IO次数，我们在写入时让相同的key放入一个文件。但是如果全局单文件的话同步消耗不可忽视。因此我们决定基于key进行分区。最多30个线程写，理想情况下，同一时间每个线程写不同的文件，因此将分区定为30。文件Id为hash(key)%30。
+评测程序是30/15个线程并发的发送数据，读写同时在进行。由于key可能在多个线程中出现，为了减少一次查询的IO次数，我们在写入时让相同的key放入一个文件。但是如果全局单文件的话同步消耗不可忽视。因此我们决定基于key进行分区。最多30个线程写，理想情况下，同一时间每个线程写不同的文件，因此将分区定为30。文件Id为hash(key)%30。
 
-由于索引结构中包含了key/version，因此查询时不需要文件中的key/version，所以将一个分区下我们将key/version存入一个文件，delta存一个文件，查询时只需读取delta文件。
+由于索引结构中包含了key/version，因此查询时不需要文件中的key/version，所以在一个分区下我们将key/version存入一个文件，delta存一个文件，查询时只需读取delta文件。
 
 ##### 2.2 存储结构&索引结构
 
-为了让读取尽量能够在一次IO中完成，我们采用了随机写delta的方式，尽量将相同的key紧凑的存放置一个page中，page的大小固定，如果一个key的delta超过了page的阈值，则顺序开辟一个page存放此key的delta，一个page中只会存放一个key的delta。
+为了让读取尽量能够在一次IO中完成，我们采用了随机写delta数据的方式，尽量将相同的key紧凑的存储，将文件分为多个page，page的大小固定，如果一个key的delta超过了page的阈值，则顺序开辟一个page存放此key的delta，一个page中只会存放一个key的delta。
 
 key和version采用顺序追加写，同时每个key/version后面追加一个delta的偏移坐标。一个分区Bucket的结构如下图所示：
 
@@ -24,14 +24,14 @@ key和version采用顺序追加写，同时每个key/version后面追加一个de
 
 Key/ Version文件有两个作用
 
-1. 恢复时构建内存索引
-2. 当数据总量大至索引无法在内存中存放，可以将key/version文件排序，在内存中构建稀疏索引，采用二分查找来查询所需的key和 version
+1. 故障恢复时构建内存索引。
+2. 当数据总量大至索引无法在内存中存放，可以将key/version文件排序，在内存中构建稀疏索引，采用二分查找来查询所需的key和 version。
 
-索引采用基本Hash索引，即Key -> Versions的映射，Versions保存了key所有的v，以及该key所拥有的pages。
+由于索引数据可以全放入内存，相比于B+树，Hash索引更具有查询优势。因此采用基本LongObjectHashMap充当索引，即Key -> Versions的映射，Versions保存了key所有的v，以及该key所拥有的pages。
 
 #### 3. 读写实现
 
-通过hash(key)取得key的分区Id，根据当前分区的索引判断key是否需要开辟一个page，如果不需要就将delta追加至已存在的page中。否则就新开辟page，并且将新的page位置添加至索引中。key/version/off追加至id.key文件。
+通过hash(key)取得key的分区Id，根据当前分区的索引判断key是否需要开辟一个page，如果不需要就将delta追加至已存在的page中。否则就开辟新page，并且将新的page位置添加至索引中。key/version/off追加至id.key文件。
 
 ```java
 public void write(long v, DeltaPacket.DeltaItem item, byte[] exceed) throws IOException {
@@ -67,17 +67,24 @@ key只会在一个文件中，只需找到相应的bucket中的Map索引，遍�
 #### 4. 优化点
  - 压缩
 
-   Package中可能有多个相同的key，由于Package内共享一个version，因此可以认为相同的key的delta可以累加为1个。n个key的field占用空间`M = (32 + log2n)*64 + 1`，单独一个byte保存n。
+   Package中可能有多个相同的key，由于Package内共享一个version，因此可以认为相同的key的delta可以累加为1个。n个key的field占用空间`M = (32 + log2n)*64 + 1`，单独使用一个byte保存n。
 
  - 缓存
 
-   由于写入和读取在引擎侧基本都是内存复用，可用还有1.5G左右的堆内存，
+   由于写入和读取在引擎侧基本都是内存复用，评测结束还有3.5G左右的堆内存空闲，但是由于评测程序占用内存的峰值在2G左右，我们采用了通用的2G固定大小的缓存。
 
- - JVM参数
+   - 我们可以绕过峰值还可以再缓存1G左右的数据，可提升至少20秒的成绩，但是有刷分的嫌疑，没有采用。
 
-   调大年轻代老年代的比例，减少full gc次数，线上没有发生或者最多一次full gc
+ - JVM gc参数调优
+
+   1. 调大年轻代老年代的比例，减少full GC次数，线上full gc由于之前1:1 的至少三次降至最多一次
+   2. `使用-XX:+UseAdaptiveSizePolicy`自适应调节STW和吞吐
+   
+   最终gc的耗时在4秒左右
 
 #### 5. 总结
+
+从第一个版本的900秒至最后的85秒，当然85远不是Java实现的极限，理想情况应该是50~55秒之间。这是一个非常有趣的过程，同时也收获慢慢。
 
 #### 致谢
 
